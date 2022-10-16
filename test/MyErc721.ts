@@ -43,7 +43,6 @@ describe('MyErc721', function () {
         });
     });
 
-
     describe('Mint', async function () {
         // mint 超過最大值應該失敗
         it('Should fail if mint over 100', async function () {
@@ -52,7 +51,7 @@ describe('MyErc721', function () {
             // 這裡revertedWith()裡的訊息，要和主代碼required()裡的訊息一樣
             await expect(token.mint(101)).to.be.revertedWith('Purchase would exceed max tokens');
         });
-        
+
         // mint 完總供應+1
         it('Total suply should increase 1', async function () {
             const { token } = await loadFixture(deployMyErc721);
@@ -60,7 +59,7 @@ describe('MyErc721', function () {
 
             const overrides = {
                 value: ethers.utils.parseEther('0.01'),
-            }
+            };
             await token.mint(1, overrides);
             expect(await token.totalSupply()).to.equal(1);
         });
@@ -75,7 +74,7 @@ describe('MyErc721', function () {
 
             const overrides = {
                 value: ethers.utils.parseEther('0.01'),
-            }
+            };
             await token.connect(addr1).mint(1, overrides);
             expect(await token.balanceOf(addr1.address)).to.equal(1);
         });
@@ -90,10 +89,10 @@ describe('MyErc721', function () {
 
             const overrides = {
                 value: ethers.utils.parseEther('0.01'),
-            }
+            };
             await token.connect(addr1).mint(1, overrides);
 
             expect(await token.ownerOf(1)).to.equal(addr1.address);
         });
-    })
+    });
 });
