@@ -1,5 +1,4 @@
-import { time, loadFixture } from '@nomicfoundation/hardhat-network-helpers';
-import { anyValue } from '@nomicfoundation/hardhat-chai-matchers/withArgs';
+import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { expect } from 'chai';
 import { ethers, upgrades } from 'hardhat';
 
@@ -14,7 +13,6 @@ describe('MyErc721', function () {
         // Deploy to proxy mode
         const token = await upgrades.deployProxy(MyErc721, {
             initializer: 'initialize',
-            kind: 'uups',
         });
 
         return { token };

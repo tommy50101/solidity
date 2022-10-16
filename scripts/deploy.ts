@@ -8,15 +8,15 @@ async function main() {
 
     const MyErc721 = await ethers.getContractFactory('MyErc721');
     // Deploy to proxy mode
-    const token = await upgrades.deployProxy(MyErc721, {
+    const proxy = await upgrades.deployProxy(MyErc721, {
         initializer: 'initialize',
         kind: 'uups',
     });
 
     // // Not sure what's this
-    // await token.deployed();
+    // await proxy.deployed();
 
-    console.log('Token address:', token.address);
+    console.log('Proxy contract address:', proxy.address);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
