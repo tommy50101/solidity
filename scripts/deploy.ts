@@ -1,4 +1,4 @@
-import { ethers } from 'hardhat';
+import { ethers, upgrades } from 'hardhat';
 
 async function main() {
     const [deployer] = await ethers.getSigners();
@@ -7,7 +7,14 @@ async function main() {
     console.log('Account balance:', (await deployer.getBalance()).toString());
 
     const MyErc721 = await ethers.getContractFactory('MyErc721');
-    const token = await MyErc721.deploy();
+    // Deploy to proxy mode
+    const token = await upgrades.deployProxy(MyErc721, {
+        initializer: 'initialize',
+        kind: 'uups',
+    });
+
+    // // Not sure what's this
+    // await token.deployed();
 
     console.log('Token address:', token.address);
 }

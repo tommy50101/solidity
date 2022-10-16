@@ -1,7 +1,7 @@
 import { time, loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 import { anyValue } from '@nomicfoundation/hardhat-chai-matchers/withArgs';
 import { expect } from 'chai';
-import { ethers } from 'hardhat';
+import { ethers, upgrades } from 'hardhat';
 
 describe('MyErc721', function () {
     // We define a fixture to reuse the same setup in every test.
@@ -11,7 +11,11 @@ describe('MyErc721', function () {
     async function deployMyErc721() {
         const [deployer] = await ethers.getSigners();
         const MyErc721 = await ethers.getContractFactory('MyErc721');
-        const token = await MyErc721.deploy();
+        // Deploy to proxy mode
+        const token = await upgrades.deployProxy(MyErc721, {
+            initializer: 'initialize',
+            kind: 'uups',
+        });
 
         return { token };
     }
@@ -40,6 +44,11 @@ describe('MyErc721', function () {
         it('Revealed should not active', async function () {
             const { token } = await loadFixture(deployMyErc721);
             expect(await token.revealed()).to.equal(false);
+        });
+
+        it('BaseURI should have a right value', async function () {
+            const { token } = await loadFixture(deployMyErc721);
+            expect(await token.baseURI()).to.equal('https://www.popdaily.com.tw/u/202008/');
         });
     });
 

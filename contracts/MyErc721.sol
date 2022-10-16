@@ -1,23 +1,25 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.17;
-
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+// Upgradeable
+import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
+// UUPS need
+import '@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol';
+import '@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol';
 
-contract MyErc721 is ERC721, Ownable {
-    using Strings for uint256;
+contract MyErc721 is Initializable, ERC721Upgradeable, OwnableUpgradeable, UUPSUpgradeable {
+    using StringsUpgradeable for uint256;
 
-    // 0.01 ether = 10000000000000000 wei
-    uint256 public price = 0.01 ether;
-    uint256 public maxSupply = 100;
-    uint256 public maxMintPerWallet = 10;
-    uint256 private currentIndex = 0;
-    bool public earlyMintActive = false;
-    bool public mintActive = false;
+    uint256 public price;
+    uint256 public maxSupply;
+    uint256 public maxMintPerWallet;
+    uint256 private currentIndex;
+    bool public earlyMintActive;
+    bool public mintActive;
 
-    bool public revealed = false;
+    bool public revealed;
     string public notRevealedURI;
     string public baseURI;
 
@@ -25,7 +27,30 @@ contract MyErc721 is ERC721, Ownable {
 
     event Minted(address minter, uint256 amount);
 
-    constructor() ERC721("Appworks", "AW") {}
+    // 可升級合約不允許有 constructor 或 在宣告時就初始化的狀態變數
+    // replace constructor()
+    function initialize() public initializer {
+		__ERC721_init('MyErc721', 'AW');
+		__Ownable_init();
+		__UUPSUpgradeable_init();
+		__init();
+	}
+
+	function __init() internal initializer {
+        price = 0.01 ether;  // 0.01 ether = 10000000000000000 wei
+        maxSupply = 100;
+        maxMintPerWallet = 10;
+        currentIndex = 0;
+        earlyMintActive = false;
+        mintActive = false;
+        revealed = false;
+        baseURI = 'https://www.popdaily.com.tw/u/202008/';
+    }
+
+    // UUPS need it
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
+
+
 
     // Implement totalSupply() Function to return current total NFT being minted - week 8
     function totalSupply() public view returns (uint256) {
