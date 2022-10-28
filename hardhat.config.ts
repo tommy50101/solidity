@@ -15,6 +15,7 @@ const config: HardhatUserConfig = {
                 url: 'https://eth-mainnet.alchemyapi.io/v2/<key>',
                 blockNumber: 11095000,
             },
+            allowUnlimitedContractSize: true
         },
     },
     etherscan: {
