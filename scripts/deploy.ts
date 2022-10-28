@@ -3,20 +3,15 @@ import { ethers, upgrades } from 'hardhat';
 async function main() {
     const [deployer] = await ethers.getSigners();
 
-    console.log('Deploying contracts with the account:', deployer.address);
-    console.log('Account balance:', (await deployer.getBalance()).toString());
 
-    const MyErc721 = await ethers.getContractFactory('MyErc721');
+    const TestErc20 = await ethers.getContractFactory('TestErc20');
     // Deploy to proxy mode
-    const proxy = await upgrades.deployProxy(MyErc721, {
-        initializer: 'initialize',
-        kind: 'uups',
-    });
+    const token = TestErc20.deploy();
 
     // // Not sure what's this
     // await proxy.deployed();
 
-    console.log('Proxy contract address:', proxy.address);
+    console.log('Proxy contract address:', token);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
