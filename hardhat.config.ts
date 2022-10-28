@@ -9,6 +9,12 @@ const config: HardhatUserConfig = {
             url: 'https://goerli.infura.io/v3/84a99a188f8e4aaab60c45f9955c5d6b',
             accounts: ['d2cf733a887c530e705fb92fbb69a98b5ec0f469e782c9f5746aa61ea7d331ab'],
         },
+        hardhat: {
+            forking: {
+                url: 'https://eth-mainnet.alchemyapi.io/v2/<key>',
+                blockNumber: 11095000,
+            },
+        },
     },
     etherscan: {
         apiKey: {
