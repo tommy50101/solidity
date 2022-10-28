@@ -5,7 +5,7 @@ pragma solidity 0.8.17;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract TestErc20 is ERC20 {
-    constructor(uint256 supply, string memory name, string memmory symbol) ERC20("TestErc20", "TE2") {
+    constructor(uint256 supply, string memory name, string memory symbol) ERC20("TestErc20", "TE2") {
         _mint(msg.sender, supply);
     }
 }
