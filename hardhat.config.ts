@@ -11,10 +11,10 @@ const config: HardhatUserConfig = {
             accounts: ['d2cf733a887c530e705fb92fbb69a98b5ec0f469e782c9f5746aa61ea7d331ab'],
         },
         hardhat: {
-            forking: {
-                url: 'https://eth-mainnet.alchemyapi.io/v2/<key>',
-                blockNumber: 11095000,
-            },
+            // forking: {
+            //     url: 'https://eth-mainnet.alchemyapi.io/v2/<key>',
+            //     blockNumber: 11095000,
+            // },
             allowUnlimitedContractSize: true
         },
     },
