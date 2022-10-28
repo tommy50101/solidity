@@ -6,7 +6,11 @@ async function main() {
 
     const TestErc20 = await ethers.getContractFactory('TestErc20');
     // Deploy to proxy mode
-    const token = TestErc20.deploy();
+    const token = TestErc20.deploy(
+        ethers.utils.parseUnits("10000", 18),
+        "TestErc20",
+        "TE",
+    );
 
     // // Not sure what's this
     // await proxy.deployed();

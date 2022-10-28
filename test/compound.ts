@@ -12,6 +12,8 @@ describe('CERC20', async () => {
     const erc20Factory = await ethers.getContractFactory("TestErc20");
     const erc20 = await erc20Factory.deploy(
         ethers.utils.parseUnits("10000", 18),
+        "TestErc20",
+        "TE",
     );
     await erc20.deployed();
 
