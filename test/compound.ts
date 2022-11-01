@@ -9,25 +9,55 @@ describe('CERC20', () => {
     it('Should be able to mint/redeem with token A', async () => {
         // 取得授權
         const [owner, userA] = await ethers.getSigners();
-        console.log('owner: ' + owner.address);
-        console.log('userA: ' + userA.address);
+        console.log('Owner地址: ' + owner.address);
+        console.log('UserA地址: ' + userA.address);
+        console.log('\n');
 
-        // 部屬 Comptroller
-        const comptrollerFactory = await ethers.getContractFactory('Comptroller');
-        const comptroller = await comptrollerFactory.deploy();
-        await comptroller.deployed();
-
-        // 部屬 Underlying tokenA  (由 userA 部屬)
-        const erc20AFactory = await ethers.getContractFactory('TestErc20A');
-        const tokenA = await erc20AFactory.connect(userA).deploy(ethers.utils.parseUnits('10000', 18), 'TestErc20A', 'EA');
-        await tokenA.deployed();
-        console.log('TokenA: ' + tokenA.address);
-        console.log(`\nuserA 部屬了 tokenA合約 以獲得 ${await tokenA.balanceOf(userA.address)} 枚 tokenA\n`);
+        // 部屬 PriceOracle
+        const priceOracleFactory = await ethers.getContractFactory('SimplePriceOracle');
+        const priceOracle = await priceOracleFactory.deploy();
+        await priceOracle.deployed();
+        console.log(`部屬SimplePriceOracle成功，地址: ${priceOracle.address}\n`);
 
         // 部屬 Interest rate model
         const interestRateModelFactory = await ethers.getContractFactory('WhitePaperInterestRateModel');
         const interestRateModel = await interestRateModelFactory.deploy(ethers.utils.parseUnits('0', 18), ethers.utils.parseUnits('0', 18));
         await interestRateModel.deployed();
+        console.log(`部屬InterestRateModel成功，地址: ${interestRateModel.address}\n`);
+
+        // 部屬 Comptroller
+        const comptrollerFactory = await ethers.getContractFactory('Comptroller');
+        const comptroller = await comptrollerFactory.deploy();
+        await comptroller.deployed();
+        console.log(`部屬Comptroller成功，地址: ${comptroller.address}\n`);
+
+        // 部屬 Unitroller (Unitroller is proxy of comptroller module)
+        // Unitroller 是 Compound 自己實作的 prxoy pattern，因此不適用 Hardhat upgrade，需手動部署 delegator 跟 deletgatee 的部分
+        const unitrollerFactory = await ethers.getContractFactory("Unitroller");
+        const unitroller = await unitrollerFactory.deploy();
+        await unitroller.deployed();
+        console.log(`部屬Unitroller成功，地址: ${unitroller.address}\n`);
+
+        // 設置 Proxy
+        await unitroller._setPendingImplementation(comptroller.address);
+        await comptroller._become(unitroller.address);
+
+        // Call Comptroller Use Proxy
+        // getContractAt("MyContract", contractAddress): Gets a deployed instance of a contract
+        let unitrollerProxy = await ethers.getContractAt(
+            "Comptroller",
+            unitroller.address
+        );
+    
+        // 指定 Comptroller 的 PriceOracle
+        await unitrollerProxy._setPriceOracle(priceOracle.address);
+
+        // 部屬 Underlying tokenA  (由 userA 部屬)
+        const erc20AFactory = await ethers.getContractFactory('TestErc20A');
+        const tokenA = await erc20AFactory.connect(userA).deploy(ethers.utils.parseUnits('10000', 18), 'TestErc20A', 'EA');
+        await tokenA.deployed();
+        console.log(`部屬TokenA成功，地址: ${tokenA.address}`);
+        console.log(`\nuserA 部屬了 TokenA合約 以獲得 ${await tokenA.balanceOf(userA.address)} 枚 tokenA\n`);
 
         // 部屬 CErc20 (由 owner 部屬) ( CErc20Immutable  ---extend--->  cErc20  ---extend--->  ctoken )
         const cErc20ImmutableFactory = await ethers.getContractFactory('CErc20Immutable');
@@ -42,16 +72,8 @@ describe('CERC20', () => {
             owner.address
         );
         await cTokenA.deployed();
-        console.log('cTokenA: ' + cTokenA.address);
-        console.log('Owner of cTokenA: ' + (await cTokenA.admin()));
-
-        // 部屬 PriceOracle
-        const priceOracleFactory = await ethers.getContractFactory('SimplePriceOracle');
-        const simplePriceOracle = await priceOracleFactory.deploy();
-        await simplePriceOracle.deployed();
-
-        // 指定 Comptroller 的 PriceOracle
-        comptroller._setPriceOracle(simplePriceOracle.address);
+        console.log(`部屬CTokenA成功，地址: ${cTokenA.address}`);
+        console.log(`Owner of cTokenA: ${await cTokenA.admin()}`);
 
         //---------------------------------------------------------------------------------------------------------------------//
 
