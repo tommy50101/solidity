@@ -4,13 +4,6 @@ import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
 describe('Compound\n', () => {
 
-    // 取得 Signers 模塊
-    const getSigners = async () => {
-        // 取得授權
-        const signers = await ethers.getSigners();
-        return signers;
-    };
-
     // 部屬基本合約模塊 (PriceOracle, InterestRateModel, Comptroller, Unitroller)
     const deployBasicContract = async () => {
         // -------------------------------------------------PriceOracle-------------------------------------------------- //
@@ -58,7 +51,10 @@ describe('Compound\n', () => {
     describe('\n⚠️  開始測試: Basic deployment\n', () => {
         it('Comptroller should have a right admin who had deployed it\n', async () => {
             const [comptroller, interestRateModel] = await loadFixture(deployBasicContract);
-            const firstSigner = (await ethers.getSigners())[0];
+
+            // 取得 signer
+            const signers = await ethers.getSigners();
+            const firstSigner = signers[0];
 
             // 部屬時沒用 connect() 指定，就會預設使用第一個signer
             expect(await comptroller.admin()).to.equal(firstSigner.address);
@@ -72,7 +68,7 @@ describe('Compound\n', () => {
 
         it('Should be able to mint/redeem with token A', async () => {
             // 取得 Signers
-            const [owner, userA, userB] = await loadFixture(getSigners);
+            const [owner, userA, userB] = await ethers.getSigners();
             console.log(`Owner地址: ${owner.address}`);
             console.log(`UserA地址: ${userA.address}`);
             console.log(`UserB地址: ${userB.address}`);
