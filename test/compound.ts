@@ -49,11 +49,12 @@ describe('Compound\n', () => {
 
     describe('\n⚠️  開始測試: Basic deployment\n', () => {
         it('Comptroller should have a right admin who had deployed it\n', async () => {
-            const [comptroller, interestRateModel] = await loadFixture(deployBasicContract);
-
             // 取得 signer
             const signers = await ethers.getSigners();
             const firstSigner = signers[0];
+
+            // 部屬相關合約: PriceOracle, InterestRateModel, Comptroller, Unitroller
+            const [comptroller, interestRateModel]: any = await loadFixture(deployBasicContract);
 
             // 部屬時沒用 connect() 指定，就會預設使用第一個signer
             expect(await comptroller.admin()).to.equal(firstSigner.address);
@@ -74,7 +75,7 @@ describe('Compound\n', () => {
             console.log(`\n`);
 
             // 部屬相關合約: PriceOracle, InterestRateModel, Comptroller, Unitroller
-            const [comptroller, interestRateModel] = await loadFixture(deployBasicContract);
+            const [comptroller, interestRateModel]: any = await loadFixture(deployBasicContract);
 
             // 部屬 Underlying tokenA  (由 userA 部屬)
             const tokenAFactory = await ethers.getContractFactory('TokenA');
