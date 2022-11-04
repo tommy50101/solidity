@@ -2,6 +2,11 @@ import { HardhatUserConfig } from 'hardhat/config';
 import '@nomicfoundation/hardhat-toolbox';
 import '@nomiclabs/hardhat-etherscan';
 import '@openzeppelin/hardhat-upgrades';
+require('dotenv').config();
+
+const INFURA_GOERLI_API_URL = process.env.INFURA_GOERLI_API_URL;
+const ALCHEMY_GOERLI_API_URL = process.env.ALCHEMY_GOERLI_API_URL;
+const ETHERSCAN_API_KEY = process.env.ETHERSCAN_MAINNET_API_KEY;
 
 const config: HardhatUserConfig = {
     solidity: {
@@ -15,21 +20,18 @@ const config: HardhatUserConfig = {
       },
     networks: {
         Goerli: {
-            url: 'https://goerli.infura.io/v3/84a99a188f8e4aaab60c45f9955c5d6b',
+            url: INFURA_GOERLI_API_URL,
             accounts: ['d2cf733a887c530e705fb92fbb69a98b5ec0f469e782c9f5746aa61ea7d331ab'],
         },
         hardhat: {
             // forking: {
-            //     url: 'https://eth-mainnet.alchemyapi.io/v2/<key>',
+            //     url: ALCHEMY_GOERLI_API_URL,
             //     blockNumber: 11095000,
             // },
-            allowUnlimitedContractSize: true
         },
     },
     etherscan: {
-        apiKey: {
-            goerli: 'G94NGYIUVNSKHZWN1KGZU9VB6KBQYCKE17',
-        },
+        apiKey: ETHERSCAN_API_KEY,
     },
 };
 
