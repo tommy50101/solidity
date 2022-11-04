@@ -44,26 +44,26 @@ describe('Compound\n', () => {
         // 指定 Comptroller 的 PriceOracle
         await unitrollerProxy._setPriceOracle(priceOracle.address);
 
-        return [comptroller, interestRateModel];
+        return [unitrollerProxy, interestRateModel, priceOracle];
     };
 
     describe('\n⚠️  開始測試: Basic deployment\n', () => {
-        it('Comptroller should have a right admin who had deployed it\n', async () => {
+        it('UnitrollerProxy should have a right admin who had deployed it\n', async () => {
             // 取得 signer
             const signers = await ethers.getSigners();
             const firstSigner = signers[0];
 
             // 部屬相關合約: PriceOracle, InterestRateModel, Comptroller, Unitroller
-            const [comptroller, interestRateModel]: any = await loadFixture(deployBasicContract);
+            const [unitrollerProxy]: any = await loadFixture(deployBasicContract);
 
             // 部屬時沒用 connect() 指定，就會預設使用第一個signer
-            expect(await comptroller.admin()).to.equal(firstSigner.address);
+            expect(await unitrollerProxy.admin()).to.equal(firstSigner.address);
         });
     });
 
     describe('\n⚠️  開始測試: Mint & Redeem\n', () => {
-        let mintAmount = ethers.utils.parseUnits('100', '18');
-        let redeemAmount = ethers.utils.parseUnits('100', '18');
+        let mintAmount = ethers.utils.parseUnits('100', 18);
+        let redeemAmount = ethers.utils.parseUnits('100', 18);
         // console.log(mintAmount);
 
         it('Should be able to mint/redeem with token A', async () => {
@@ -75,7 +75,7 @@ describe('Compound\n', () => {
             console.log(`\n`);
 
             // 部屬相關合約: PriceOracle, InterestRateModel, Comptroller, Unitroller
-            const [comptroller, interestRateModel]: any = await loadFixture(deployBasicContract);
+            const [unitrollerProxy, interestRateModel]: any = await loadFixture(deployBasicContract);
 
             // 部屬 Underlying tokenA  (由 userA 部屬)
             const tokenAFactory = await ethers.getContractFactory('TokenA');
@@ -88,7 +88,7 @@ describe('Compound\n', () => {
             const cTokenAFactory = await ethers.getContractFactory('CErc20Immutable');
             const cTokenA = await cTokenAFactory.deploy(
                 tokenA.address,
-                comptroller.address,
+                unitrollerProxy.address,
                 interestRateModel.address,
                 ethers.utils.parseUnits('1', 18), // 初始1:1
                 'CTokenA',
@@ -102,13 +102,13 @@ describe('Compound\n', () => {
 
             //---------------------------------------------------------------------------------------------------------------------//
 
-            console.log(`\ncTokenA 是否在 market list map 裡 ?  => ${(await comptroller.markets(cTokenA.address)).isListed ? '是' : '否'}`);
+            console.log(`\ncTokenA 是否在 market list map 裡 ?  => ${(await unitrollerProxy.markets(cTokenA.address)).isListed ? '是' : '否'}`);
 
-            // 把該 cToken 加到 comptroller 的 markets listed map 裡
-            await comptroller._supportMarket(cTokenA.address);
-            console.log(`呼叫 comptroller._supportMarket(cTokenA.address)`);
+            // 把該 cToken 加到 UnitrollerProxy 的 markets listed map 裡
+            await unitrollerProxy._supportMarket(cTokenA.address);
+            console.log(`呼叫 UnitrollerProxy._supportMarket(cTokenA.address)`);
 
-            console.log(`cTokenA 是否在 market list map 裡 ?  => ${(await comptroller.markets(cTokenA.address)).isListed ? '是' : '否'}`);
+            console.log(`cTokenA 是否在 market list map 裡 ?  => ${(await unitrollerProxy.markets(cTokenA.address)).isListed ? '是' : '否'}`);
 
             //---------------------------------------------------------------------------------------------------------------------//
 
@@ -119,7 +119,7 @@ describe('Compound\n', () => {
             // 取得轉帳授權: userA 同意轉 tokenA 至 cTokenA合約
             await tokenA.connect(userA).approve(cTokenA.address, mintAmount);
 
-            // UserA 呼叫 cTokenA合約 裡的 mint(), 該函數裡會先呼叫 Comptroller 的 mintAllowed() 以確認該 token 可以 mint
+            // UserA 呼叫 cTokenA合約 裡的 mint(), 該函數裡會先呼叫 UnitrollerProxy 的 mintAllowed() 以確認該 token 可以 mint
             await cTokenA.connect(userA).mint(mintAmount);
 
             console.log(`UserA mint cTokenA ，數量:                ${mintAmount}\n`);
@@ -149,7 +149,7 @@ describe('Compound\n', () => {
 
             console.log('Redeem前 UserA 手中的 TokenA 數量:       ' + (await tokenA.balanceOf(userA.address)));
 
-            // UserA 呼叫 cTokenA合約 裡的 redeem(), 該函數裡會先呼叫 Comptroller 的 mintAllowed() 以確認該 token 可以 mint
+            // UserA 呼叫 cTokenA合約 裡的 redeem(), 該函數裡會先呼叫 UnitrollerProxy 的 mintAllowed() 以確認該 token 可以 mint
             await cTokenA.connect(userA).redeem(redeemAmount);
 
             console.log(`UserA redeem cTokenA ，數量:              ${redeemAmount}\n`);
