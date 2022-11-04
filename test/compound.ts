@@ -3,7 +3,6 @@ import { expect } from 'chai';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
 
 describe('Compound\n', () => {
-
     // 部屬基本合約模塊 (PriceOracle, InterestRateModel, Comptroller, Unitroller)
     const deployBasicContract = async () => {
         // -------------------------------------------------PriceOracle-------------------------------------------------- //
@@ -78,21 +77,21 @@ describe('Compound\n', () => {
             const [comptroller, interestRateModel] = await loadFixture(deployBasicContract);
 
             // 部屬 Underlying tokenA  (由 userA 部屬)
-            const erc20AFactory = await ethers.getContractFactory('TestErc20A');
-            const tokenA = await erc20AFactory.connect(userA).deploy(ethers.utils.parseUnits('10000', 18), 'TestErc20A', 'EA');
+            const tokenAFactory = await ethers.getContractFactory('TokenA');
+            const tokenA = await tokenAFactory.connect(userA).deploy(ethers.utils.parseUnits('10000', 18), 'TokenA', 'TA');
             await tokenA.deployed();
             console.log(`部屬TokenA成功，地址: ${tokenA.address}`);
             console.log(`userA 部屬了 TokenA合約 以獲得 ${await tokenA.balanceOf(userA.address)} 枚 tokenA\n`);
 
-            // 部屬 CErc20 (由 owner 部屬) ( CErc20Immutable  ---extend--->  cErc20  ---extend--->  ctoken )
-            const cErc20ImmutableFactory = await ethers.getContractFactory('CErc20Immutable');
-            const cTokenA = await cErc20ImmutableFactory.deploy(
+            // 部屬 CToken (由 owner 部屬) ( CErc20Immutable  ---extend--->  cErc20  ---extend--->  ctoken )
+            const cTokenAFactory = await ethers.getContractFactory('CErc20Immutable');
+            const cTokenA = await cTokenAFactory.deploy(
                 tokenA.address,
                 comptroller.address,
                 interestRateModel.address,
                 ethers.utils.parseUnits('1', 18), // 初始1:1
-                'TestCErc20A',
-                'CEA',
+                'CTokenA',
+                'CTA',
                 18,
                 owner.address
             );
