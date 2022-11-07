@@ -289,8 +289,8 @@ describe('Compound\n', () => {
         expect(await tokenA.balanceOf(userA.address)).to.equal(borrowAmountOfTokenA);
 
         // getAccountLiquidity(address) 會計算該 address 剩餘可借款數量(liquidity) 及 欠款數量(shortfall)
-        // userA 真實剩餘借款量(tokenB) = 抵押token市價 * 借出token數量 * 抵押物collateralFactor - 借出token市價 * 借出token數量，正數加到liquidity，負數加到shortfall
-        // 100 * 1 * 0.7 - 1 * 50 = 20
+        // userA 真實剩餘借款量(tokenB) = 抵押token市價 * 抵押token數量 * 抵押物collateralFactor - 借出token市價 * 借出token數量，正數加到liquidity，負數加到shortfall
+        // 100u * 1 * 0.7 - 50u * 1 = 20u
         [errorUserA, liquidityUserA, shortfallUserA] = await unitrollerProxy.getAccountLiquidity(userA.address);
         console.log(`UserA 的剩餘借款額度為: ${liquidityUserA}`);
         console.log(`UserA 的積欠額度為: ${shortfallUserA} * 10^18`);
@@ -323,8 +323,8 @@ describe('Compound\n', () => {
             await unitrollerProxy._setCollateralFactor(cTokenB.address, collateralFactorOfTokenB);
 
             // getAccountLiquidity(address) 會計算該 address 剩餘可借款數量(liquidity) 及 欠款數量(shortfall)
-            // userA 真實剩餘借款量(tokenB) = 抵押token市價 * 借出token數量 * 抵押物collateralFactor - 借出token市價 * 借出token數量，正數加到liquidity，負數加到shortfall
-            // 100 * 1 * 0.3 - 1 * 50 = -20
+            // userA 真實剩餘借款量(tokenB) = 抵押token市價 * 抵押token數量 * 抵押物collateralFactor - 借出token市價 * 借出token數量，正數加到liquidity，負數加到shortfall
+            // 100u * 1 * 0.3 - 50u * 1 = -20u
             let [errorUserA, liquidityUserA, shortfallUserA] = await unitrollerProxy.getAccountLiquidity(userA.address);
             console.log(`UserA 的剩餘借款額度為: ${liquidityUserA}`);
             console.log(`UserA 的積欠額度為: ${shortfallUserA} * 10^18`);
@@ -373,8 +373,8 @@ describe('Compound\n', () => {
             await priceOracle.setUnderlyingPrice(cTokenB.address, PriceOfTokenB);
 
             // getAccountLiquidity(address) 會計算該 address 剩餘可借款數量(liquidity) 及 欠款數量(shortfall)
-            // userA 真實剩餘借款量(tokenB) = 抵押token市價 * 借出token數量 * 抵押物collateralFactor - 借出token市價 * 借出token數量，正數加到liquidity，負數加到shortfall
-            // 60 * 1 * 0.7 - 1 * 50 = -8
+            // userA 真實剩餘借款量(tokenB) = 抵押token市價 * 抵押token數量 * 抵押物collateralFactor - 借出token市價 * 借出token數量，正數加到liquidity，負數加到shortfall
+            // 60u * 1 * 0.7 - 50u * 1 = -8u
             let [errorUserA, liquidityUserA, shortfallUserA] = await unitrollerProxy.getAccountLiquidity(userA.address);
             console.log(`UserA 的剩餘借款額度為: ${liquidityUserA}`);
             console.log(`UserA 的積欠額度為: ${shortfallUserA} * 10^18`);
