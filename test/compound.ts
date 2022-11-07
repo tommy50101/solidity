@@ -299,6 +299,16 @@ describe('Compound\n', () => {
         return [collateralFactorOfTokenB, unitrollerProxy, priceOracle, userA, userB, tokenA, tokenB, cTokenA, cTokenB, PriceOfTokenB];
     };
 
+    async function liquidate(target: any, liquidator: any, token: any, cToken: any, liquidationAmountOnce: any) {
+        // 先轉點 token 給 liquidator ，不然 liquidator 也沒 token 可還
+        await token.transfer(liquidator.address, liquidationAmountOnce);
+
+        console.log(`清算前，liquidator 擁有的 cToken 數量: ${await cToken.balanceOf(liquidator.address)}`);
+        await token.connect(liquidator).approve(cToken.address, liquidationAmountOnce);
+        await cToken.connect(liquidator).liquidateBorrow(target.address, liquidationAmountOnce, cToken.address);
+        console.log(`清算後，liquidator 擁有的 cToken 數量: ${await cToken.balanceOf(liquidator.address)}`);
+    }
+
     describe('\n⚠️  Borrow & Repay\n', () => {
         it('Should be able to borrrow\n', async () => {
             console.log(`⚠️　【測試開始: Should be able to borrrow】　⚠️`);
@@ -336,10 +346,6 @@ describe('Compound\n', () => {
             console.log(`單次可清算數量: ${liquidationAmountOnce}`);
             expect(liquidationAmountOnce).to.equal(ethers.utils.parseUnits('25', 18));
 
-            // 清算
-            // 先轉點 tokenA 給 userB ，不然 userB 也沒 tokenA 可還
-            await tokenA.transfer(userB.address, liquidationAmountOnce);
-
             // !!! require( cTokenCollateral.balanceOf(borrower) >= seizeTokens )
             // seizeTokens = actualRepayAmount * liquidationIncentive * priceBorrowed / (priceCollateral * exchangeRate)
             // seizeTokens = 25 * 1.08 * 1 / (100 * 1) = 27
@@ -349,12 +355,8 @@ describe('Compound\n', () => {
             await cTokenA.connect(userA).mint(ethers.utils.parseUnits('27', 18));
             console.log(await cTokenA.balanceOf(userA.address));
 
-            // userB 代替 userA 還 25 顆 tokenA 給 cToken合約
-            // Q: 代償後，userB 的 cToken 只增加了 1.944 顆?
-            console.log(`清算前，userB 擁有的 cTokenA 數量: ${await cTokenA.balanceOf(userB.address)}`);
-            await tokenA.connect(userB).approve(cTokenA.address, liquidationAmountOnce);
-            await cTokenA.connect(userB).liquidateBorrow(userA.address, liquidationAmountOnce, cTokenA.address);
-            console.log(`清算後，userB 擁有的 cTokenA 數量: ${await cTokenA.balanceOf(userB.address)}`);
+            // 清算
+            await liquidate(userA, userB, tokenA, cTokenA, liquidationAmountOnce);
 
             console.log(`\n---------------------------------------------清算結束---------------------------------------------\n`);
 
@@ -385,11 +387,7 @@ describe('Compound\n', () => {
             let liquidationAmountOnce = ethers.utils.parseUnits((50 * 0.5).toString(), 18);
             console.log(`單次可清算數量: ${liquidationAmountOnce}`);
             expect(liquidationAmountOnce).to.equal(ethers.utils.parseUnits('25', 18));
-
-            // 清算
-            // 先轉點 tokenA 給 userB ，不然 userB 也沒 tokenA 可還
-            await tokenA.transfer(userB.address, liquidationAmountOnce);
-
+            
             /// !!! require( cTokenCollateral.balanceOf(borrower) >= seizeTokens )
             // seizeTokens = actualRepayAmount * liquidationIncentive * priceBorrowed / (priceCollateral * exchangeRate)
             // seizeTokens = 25 * 1.08 * 1 / (100 * 1) = 27
@@ -399,12 +397,8 @@ describe('Compound\n', () => {
             await cTokenA.connect(userA).mint(ethers.utils.parseUnits('27', 18));
             console.log(await cTokenA.balanceOf(userA.address));
 
-            // userB 代替 userA 還 25 顆 tokenA 給 cToken合約
-            // Q: 代償後，userB 的 cToken 只增加了 1.944 顆?
-            console.log(`清算前，userB 擁有的 cTokenA 數量: ${await cTokenA.balanceOf(userB.address)}`);
-            await tokenA.connect(userB).approve(cTokenA.address, liquidationAmountOnce);
-            await cTokenA.connect(userB).liquidateBorrow(userA.address, liquidationAmountOnce, cTokenA.address);
-            console.log(`清算後，userB 擁有的 cTokenA 數量: ${await cTokenA.balanceOf(userB.address)}`);
+            // 清算
+            await liquidate(userA, userB, tokenA, cTokenA, liquidationAmountOnce);
 
             console.log(`\n---------------------------------------------清算結束---------------------------------------------\n`);
 
