@@ -228,7 +228,7 @@ describe('Compound\n', () => {
             let collateralFactorOfTokenA = ethers.utils.parseUnits('0.7', 18);
             let collateralFactorOfTokenB = ethers.utils.parseUnits('0.7', 18);
             let closeFactor = ethers.utils.parseUnits('0.5', 18);
-            let liquidationIncentive = ethers.utils.parseUnits('0.08', 18);
+            let liquidationIncentive = ethers.utils.parseUnits('1.08', 18);
     
             // 部屬相關合約: PriceOracle, InterestRateModel, Comptroller, Unitroller
             const [unitrollerProxy, interestRateModel, priceOracle, owner, userA, userB, tokenA, tokenB, cTokenA, cTokenB]: any = await loadFixture(
@@ -337,13 +337,13 @@ describe('Compound\n', () => {
             // 先轉點 tokenA 給 userB ，不然 userB 也沒 tokenA 可還
             await tokenA.transfer(userB.address, liquidationAmountOnce);
 
-            // Q: 不知為何，這邊 userA 擁有的 cTokenA 數量，一定要大於 2 顆，不然會有 LIQUIDATE_SEIZE_TOO_MUCH 的 error，所以加了這段
+            // !!! require( cTokenCollateral.balanceOf(borrower) >= seizeTokens )
             // seizeTokens = actualRepayAmount * liquidationIncentive * priceBorrowed / (priceCollateral * exchangeRate)
-            // seizeTokens = 25 * 1.08 * 1 / (100 * ?) = 2
+            // seizeTokens = 25 * 1.08 * 1 / (100 * 1) = 27
             console.log(await cTokenA.balanceOf(userA.address));
-            await tokenA.transfer(userA.address, ethers.utils.parseUnits('2', 18));
-            await tokenA.connect(userA).approve(cTokenA.address, ethers.utils.parseUnits('2', 18));
-            await cTokenA.connect(userA).mint(ethers.utils.parseUnits('2', 18));
+            await tokenA.transfer(userA.address, ethers.utils.parseUnits('27', 18));
+            await tokenA.connect(userA).approve(cTokenA.address, ethers.utils.parseUnits('27', 18));
+            await cTokenA.connect(userA).mint(ethers.utils.parseUnits('27', 18));
             console.log(await cTokenA.balanceOf(userA.address));
 
             // userB 代替 userA 還 25 顆 tokenA 給 cToken合約
@@ -387,13 +387,13 @@ describe('Compound\n', () => {
             // 先轉點 tokenA 給 userB ，不然 userB 也沒 tokenA 可還
             await tokenA.transfer(userB.address, liquidationAmountOnce);
 
-            // Q: 不知為何，這邊 userA 擁有的 cTokenA 數量，一定要大於 2 顆，不然會有 LIQUIDATE_SEIZE_TOO_MUCH 的 error，所以加了這段
+            /// !!! require( cTokenCollateral.balanceOf(borrower) >= seizeTokens )
             // seizeTokens = actualRepayAmount * liquidationIncentive * priceBorrowed / (priceCollateral * exchangeRate)
-            // seizeTokens = 25 * 1.08 * 1 / (100 * ?) = 2
+            // seizeTokens = 25 * 1.08 * 1 / (100 * 1) = 27
             console.log(await cTokenA.balanceOf(userA.address));
-            await tokenA.transfer(userA.address, ethers.utils.parseUnits('2', 18));
-            await tokenA.connect(userA).approve(cTokenA.address, ethers.utils.parseUnits('2', 18));
-            await cTokenA.connect(userA).mint(ethers.utils.parseUnits('2', 18));
+            await tokenA.transfer(userA.address, ethers.utils.parseUnits('27', 18));
+            await tokenA.connect(userA).approve(cTokenA.address, ethers.utils.parseUnits('27', 18));
+            await cTokenA.connect(userA).mint(ethers.utils.parseUnits('27', 18));
             console.log(await cTokenA.balanceOf(userA.address));
 
             // userB 代替 userA 還 25 顆 tokenA 給 cToken合約
