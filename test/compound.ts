@@ -267,8 +267,8 @@ describe('Compound\n', () => {
         await tokenB.transfer(userA.address, mintAmountOfTokenB);
         await tokenB.connect(userA).approve(cTokenB.address, mintAmountOfTokenB);
         await cTokenB.connect(userA).mint(mintAmountOfTokenB);
-        let [errorUserA, liquidityUserA, shortfallUserA] = await unitrollerProxy.getAccountLiquidity(userA.address);
-        console.log(`UserA 使用 ${mintAmountOfTokenB} 顆 tokenB 抵押後的剩餘借款額度為: ${liquidityUserA}\n`);
+        let [errorUserA, liquidity, shortfall] = await unitrollerProxy.getAccountLiquidity(userA.address);
+        console.log(`UserA 使用 ${mintAmountOfTokenB} 顆 tokenB 抵押後的剩餘借款額度為: ${liquidity}\n`);
 
         // UserB 使用 50 顆 tokenA 來 mint cTokenA
         let mintAmountOfTokenA = ethers.utils.parseUnits('50', 18);
@@ -291,21 +291,21 @@ describe('Compound\n', () => {
         // getAccountLiquidity(address) 會計算該 address 剩餘可借款數量(liquidity) 及 欠款數量(shortfall)
         // userA 真實剩餘借款量(tokenB) = 抵押token市價 * 抵押token數量 * 抵押物collateralFactor - 借出token市價 * 借出token數量，正數加到liquidity，負數加到shortfall
         // 100u * 1 * 0.7 - 50u * 1 = 20u
-        [errorUserA, liquidityUserA, shortfallUserA] = await unitrollerProxy.getAccountLiquidity(userA.address);
-        console.log(`UserA 的剩餘借款額度為: ${liquidityUserA}`);
-        console.log(`UserA 的積欠額度為: ${shortfallUserA} * 10^18`);
-        console.log(`是否可清算? => ${shortfallUserA > 0 ? 'Yes' : 'No'}\n`);
+        [errorUserA, liquidity, shortfall] = await unitrollerProxy.getAccountLiquidity(userA.address);
+        console.log(`UserA 的剩餘借款額度為: ${liquidity}`);
+        console.log(`UserA 的積欠額度為: ${shortfall} * 10^18`);
+        console.log(`是否可清算? => ${shortfall > 0 ? 'Yes' : 'No'}\n`);
 
         return [collateralFactorOfTokenB, unitrollerProxy, priceOracle, userA, userB, tokenA, tokenB, cTokenA, cTokenB, PriceOfTokenB];
     };
 
-    async function liquidate(target: any, liquidator: any, token: any, cToken: any, liquidationAmountOnce: any) {
+    async function liquidate(target: any, liquidator: any, token: any, cToken: any, amountOfLiquidateOnce: any) {
         // 先轉點 token 給 liquidator ，不然 liquidator 也沒 token 可還
-        await token.transfer(liquidator.address, liquidationAmountOnce);
+        await token.transfer(liquidator.address, amountOfLiquidateOnce);
 
         console.log(`清算前，liquidator 擁有的 cToken 數量: ${await cToken.balanceOf(liquidator.address)}`);
-        await token.connect(liquidator).approve(cToken.address, liquidationAmountOnce);
-        await cToken.connect(liquidator).liquidateBorrow(target.address, liquidationAmountOnce, cToken.address);
+        await token.connect(liquidator).approve(cToken.address, amountOfLiquidateOnce);
+        await cToken.connect(liquidator).liquidateBorrow(target.address, amountOfLiquidateOnce, cToken.address);
         console.log(`清算後，liquidator 擁有的 cToken 數量: ${await cToken.balanceOf(liquidator.address)}`);
     }
 
@@ -335,16 +335,16 @@ describe('Compound\n', () => {
             // getAccountLiquidity(address) 會計算該 address 剩餘可借款數量(liquidity) 及 欠款數量(shortfall)
             // userA 真實剩餘借款量(tokenB) = 抵押token市價 * 抵押token數量 * 抵押物collateralFactor - 借出token市價 * 借出token數量，正數加到liquidity，負數加到shortfall
             // 100u * 1 * 0.3 - 50u * 1 = -20u
-            let [errorUserA, liquidityUserA, shortfallUserA] = await unitrollerProxy.getAccountLiquidity(userA.address);
-            console.log(`UserA 的剩餘借款額度為: ${liquidityUserA}`);
-            console.log(`UserA 的積欠額度為: ${shortfallUserA} * 10^18`);
-            console.log(`是否可清算? => ${shortfallUserA > 0 ? 'Yes' : 'No'}`);
+            let [errorUserA, liquidity, shortfall] = await unitrollerProxy.getAccountLiquidity(userA.address);
+            console.log(`UserA 的剩餘借款額度為: ${liquidity}`);
+            console.log(`UserA 的積欠額度為: ${shortfall} * 10^18`);
+            console.log(`是否可清算? => ${shortfall > 0 ? 'Yes' : 'No'}`);
 
             console.log(`\n---------------------------------------------清算開始---------------------------------------------\n`);
             // 計算 單次可清算數量 = 借款人已借得該token數量 * closeFactor
-            let liquidationAmountOnce = ethers.utils.parseUnits((50 * 0.5).toString(), 18);
-            console.log(`單次可清算數量: ${liquidationAmountOnce}`);
-            expect(liquidationAmountOnce).to.equal(ethers.utils.parseUnits('25', 18));
+            let amountOfLiquidateOnce = ethers.utils.parseUnits((50 * 0.5).toString(), 18);
+            console.log(`單次可清算數量: ${amountOfLiquidateOnce}`);
+            expect(amountOfLiquidateOnce).to.equal(ethers.utils.parseUnits('25', 18));
 
             // !!! require( cTokenCollateral.balanceOf(borrower) >= seizeTokens )
             // seizeTokens = actualRepayAmount * liquidationIncentive * priceBorrowed / (priceCollateral * exchangeRate)
@@ -356,7 +356,7 @@ describe('Compound\n', () => {
             console.log(await cTokenA.balanceOf(userA.address));
 
             // 清算
-            await liquidate(userA, userB, tokenA, cTokenA, liquidationAmountOnce);
+            await liquidate(userA, userB, tokenA, cTokenA, amountOfLiquidateOnce);
 
             console.log(`\n---------------------------------------------清算結束---------------------------------------------\n`);
 
@@ -377,16 +377,16 @@ describe('Compound\n', () => {
             // getAccountLiquidity(address) 會計算該 address 剩餘可借款數量(liquidity) 及 欠款數量(shortfall)
             // userA 真實剩餘借款量(tokenB) = 抵押token市價 * 抵押token數量 * 抵押物collateralFactor - 借出token市價 * 借出token數量，正數加到liquidity，負數加到shortfall
             // 60u * 1 * 0.7 - 50u * 1 = -8u
-            let [errorUserA, liquidityUserA, shortfallUserA] = await unitrollerProxy.getAccountLiquidity(userA.address);
-            console.log(`UserA 的剩餘借款額度為: ${liquidityUserA}`);
-            console.log(`UserA 的積欠額度為: ${shortfallUserA} * 10^18`);
-            console.log(`是否可清算? => ${shortfallUserA > 0 ? 'Yes' : 'No'}`);
+            let [errorUserA, liquidity, shortfall] = await unitrollerProxy.getAccountLiquidity(userA.address);
+            console.log(`UserA 的剩餘借款額度為: ${liquidity}`);
+            console.log(`UserA 的積欠額度為: ${shortfall} * 10^18`);
+            console.log(`是否可清算? => ${shortfall > 0 ? 'Yes' : 'No'}`);
 
             console.log(`\n---------------------------------------------清算開始---------------------------------------------\n`);
             // 計算 單次可清算數量 = 借款人已借得該token數量 * closeFactor
-            let liquidationAmountOnce = ethers.utils.parseUnits((50 * 0.5).toString(), 18);
-            console.log(`單次可清算數量: ${liquidationAmountOnce}`);
-            expect(liquidationAmountOnce).to.equal(ethers.utils.parseUnits('25', 18));
+            let amountOfLiquidateOnce = ethers.utils.parseUnits((50 * 0.5).toString(), 18);
+            console.log(`單次可清算數量: ${amountOfLiquidateOnce}`);
+            expect(amountOfLiquidateOnce).to.equal(ethers.utils.parseUnits('25', 18));
             
             /// !!! require( cTokenCollateral.balanceOf(borrower) >= seizeTokens )
             // seizeTokens = actualRepayAmount * liquidationIncentive * priceBorrowed / (priceCollateral * exchangeRate)
@@ -398,7 +398,7 @@ describe('Compound\n', () => {
             console.log(await cTokenA.balanceOf(userA.address));
 
             // 清算
-            await liquidate(userA, userB, tokenA, cTokenA, liquidationAmountOnce);
+            await liquidate(userA, userB, tokenA, cTokenA, amountOfLiquidateOnce);
 
             console.log(`\n---------------------------------------------清算結束---------------------------------------------\n`);
 
