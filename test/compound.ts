@@ -209,111 +209,115 @@ describe('Compound\n', () => {
         });
     });
 
-    describe('\n⚠️  Borrow & Repay\n', () => {
-        /**
-         * 基本借貸模塊
-         * -參數
-         * --TokenA 價格 = $1  ，抵押因子(collateralFactor) = 0.7
-         * --TokenB 價格 = $100，抵押因子(collateralFactor) = 0.7
-         * --清算因子(closeFactor) = 0.5
-         * --清算獎勵(liquidationIncentive) = 1.08
-         * -動作:
-         * --UserA 使用 1 顆 tokenB 來 mint cTokenB
-         * --UserB 使用 50 顆 tokenA 來 mint cTokenA
-         * --UserA 使用 tokenB (1 顆) 作為抵押品來借出 50 顆 token A
-         *  */ 
-        const basicBorrow = async () => {
-            let PriceOfTokenA = ethers.utils.parseUnits('1', 18);
-            let PriceOfTokenB = ethers.utils.parseUnits('100', 18);
-            let collateralFactorOfTokenA = ethers.utils.parseUnits('0.7', 18);
-            let collateralFactorOfTokenB = ethers.utils.parseUnits('0.7', 18);
-            let closeFactor = ethers.utils.parseUnits('0.5', 18);
-            let liquidationIncentive = ethers.utils.parseUnits('1.08', 18);
-    
-            // 部屬相關合約: PriceOracle, InterestRateModel, Comptroller, Unitroller
-            const [unitrollerProxy, interestRateModel, priceOracle, owner, userA, userB, tokenA, tokenB, cTokenA, cTokenB]: any = await loadFixture(
-                deployBasicContract
-            );
-    
-            // 用 Oracle 設定價格  (tokenA 價格 $1 , tokenB 價格 $100)
-            await priceOracle.setUnderlyingPrice(cTokenA.address, PriceOfTokenA);
-            await priceOracle.setUnderlyingPrice(cTokenB.address, PriceOfTokenB);
-            console.log(`\ntokenA 的價格為: ${await priceOracle.getUnderlyingPrice(cTokenA.address)}`);
-            console.log(`tokenA 的價格為: ${await priceOracle.getUnderlyingPrice(cTokenB.address)}\n`);
-            expect(await priceOracle.getUnderlyingPrice(cTokenA.address)).to.equal(PriceOfTokenA);
-            expect(await priceOracle.assetPrices(tokenA.address)).to.equal(PriceOfTokenA);
-            expect(await priceOracle.getUnderlyingPrice(cTokenB.address)).to.equal(PriceOfTokenB);
-            expect(await priceOracle.assetPrices(tokenB.address)).to.equal(PriceOfTokenB);
-    
-            // UnitrollerProxy 把 CTokenA, CTokenB 加到 markets map 裡
-            await unitrollerProxy._supportMarket(cTokenA.address);
-            await unitrollerProxy._supportMarket(cTokenB.address);
-    
-            // 設定 TokenB 的抵押成數 (Collateral Factor，這邊為50%)  (注意第二個參數 scaled by 1e18)
-            // await unitrollerProxy._setCollateralFactor(cTokenA.address, collateralFactorOfTokenA);
-            await unitrollerProxy._setCollateralFactor(cTokenB.address, collateralFactorOfTokenB);
-    
-            // 設定清償人最高可代還數量 (Close Factor，這邊為50%)
-            await unitrollerProxy._setCloseFactor(closeFactor);
-    
-            // 設定清償人獎勵 (Liquidation Incentive，這邊為0.08)
-            await unitrollerProxy._setLiquidationIncentive(liquidationIncentive);
-    
-            // 增加流動性
-            await unitrollerProxy.connect(userA).enterMarkets([cTokenA.address, cTokenB.address]);
-            await unitrollerProxy.connect(userB).enterMarkets([cTokenA.address, cTokenB.address]);
-    
-            // UserA 使用 1 顆 tokenB 來 mint cTokenB
-            let mintAmountOfTokenB = ethers.utils.parseUnits('1', 18);
-            await tokenB.transfer(userA.address, mintAmountOfTokenB);
-            await tokenB.connect(userA).approve(cTokenB.address, mintAmountOfTokenB);
-            await cTokenB.connect(userA).mint(mintAmountOfTokenB);
-            let [errorUserA, liquidityUserA, shortfallUserA] = await unitrollerProxy.getAccountLiquidity(userA.address);
-            console.log(`UserA 使用 ${mintAmountOfTokenB} 顆 tokenB 抵押後的剩餘借款額度為: ${liquidityUserA}\n`);
-    
-            // UserB 使用 50 顆 tokenA 來 mint cTokenA
-            let mintAmountOfTokenA = ethers.utils.parseUnits('50', 18);
-            await tokenA.transfer(userB.address, mintAmountOfTokenA);
-            await tokenA.connect(userB).approve(cTokenA.address, mintAmountOfTokenA);
-            await cTokenA.connect(userB).mint(mintAmountOfTokenA);
-            let [errorUserB, liquidityUserB, shortfallUserB] = await unitrollerProxy.getAccountLiquidity(userB.address);
-            // console.log(`UserB 使用 ${mintAmountOfTokenA} 顆 tokenA 抵押後的剩餘借款額度為: ${liquidityUserB}`);
-    
-            // UserA 使用 tokenB (1 顆) 作為抵押品來借出 50 顆 token A
-            console.log(`----------------------------UserA 使用 tokenB (1 顆) 作為抵押品來借出 50 顆 token A----------------------------\n`);
-            let borrowAmountOfTokenA = ethers.utils.parseUnits('50', '18');
-            await cTokenA.connect(userA).borrow(borrowAmountOfTokenA);
-    
-            console.log(`UserA 使用 ${mintAmountOfTokenB} 顆 tokenB 作為抵押品來借出 ${borrowAmountOfTokenA} 顆 token A 後:`);
-            console.log(`userA 擁有 ${await tokenA.balanceOf(userA.address)} 個 tokenA`);
-    
-            expect(await tokenA.balanceOf(userA.address)).to.equal(borrowAmountOfTokenA);
-    
-            [errorUserA, liquidityUserA, shortfallUserA] = await unitrollerProxy.getAccountLiquidity(userA.address);
-            console.log(`UserA 的剩餘借款額度為: ${liquidityUserA}`);
-    
-            // userA 真實剩餘借款量(tokenB) = 抵押token市價 * 借出token數量 * 抵押物collateralFactor - 借出token市價 * 借出token數量 = 100 * 1 * 0.7 - 1 * 50;
-            let realLiquidityofUserA = 100 * 1 * 0.7 - 1 * 50;
-            console.log(`UserA 的真實剩餘借款額度為: ${realLiquidityofUserA} * 10^18`);
-            console.log(`\n真實剩餘借款額度是否小於 0 ? => ${realLiquidityofUserA < 0 ? 'Yes' : 'No'}`);
-            console.log(`是否可清算? => ${realLiquidityofUserA < 0 ? 'Yes' : 'No'}\n`);
-    
-            return [collateralFactorOfTokenB, unitrollerProxy, priceOracle, userA, userB, tokenA, tokenB, cTokenA, cTokenB, PriceOfTokenB];
-        };
+    /**
+     * 基本借貸模塊
+     * -參數
+     * --TokenA 價格 = $1  ，抵押因子(collateralFactor) = 0.7
+     * --TokenB 價格 = $100，抵押因子(collateralFactor) = 0.7
+     * --清算因子(closeFactor) = 0.5
+     * --清算獎勵(liquidationIncentive) = 1.08
+     * -動作:
+     * --UserA 使用 1 顆 tokenB 來 mint cTokenB
+     * --UserB 使用 50 顆 tokenA 來 mint cTokenA
+     * --UserA 使用 tokenB (1 顆) 作為抵押品來借出 50 顆 token A
+     *  */
+    const basicBorrow = async () => {
+        let PriceOfTokenA = ethers.utils.parseUnits('1', 18);
+        let PriceOfTokenB = ethers.utils.parseUnits('100', 18);
+        let collateralFactorOfTokenA = ethers.utils.parseUnits('0.7', 18);
+        let collateralFactorOfTokenB = ethers.utils.parseUnits('0.7', 18);
+        let closeFactor = ethers.utils.parseUnits('0.5', 18);
+        let liquidationIncentive = ethers.utils.parseUnits('1.08', 18);
 
+        // 部屬相關合約: PriceOracle, InterestRateModel, Comptroller, Unitroller
+        const [unitrollerProxy, interestRateModel, priceOracle, owner, userA, userB, tokenA, tokenB, cTokenA, cTokenB]: any = await loadFixture(
+            deployBasicContract
+        );
+
+        // 用 Oracle 設定價格  (tokenA 價格 $1 , tokenB 價格 $100)
+        await priceOracle.setUnderlyingPrice(cTokenA.address, PriceOfTokenA);
+        await priceOracle.setUnderlyingPrice(cTokenB.address, PriceOfTokenB);
+        console.log(`\ntokenA 的價格為: ${await priceOracle.getUnderlyingPrice(cTokenA.address)}`);
+        console.log(`tokenA 的價格為: ${await priceOracle.getUnderlyingPrice(cTokenB.address)}\n`);
+        expect(await priceOracle.getUnderlyingPrice(cTokenA.address)).to.equal(PriceOfTokenA);
+        expect(await priceOracle.assetPrices(tokenA.address)).to.equal(PriceOfTokenA);
+        expect(await priceOracle.getUnderlyingPrice(cTokenB.address)).to.equal(PriceOfTokenB);
+        expect(await priceOracle.assetPrices(tokenB.address)).to.equal(PriceOfTokenB);
+
+        // UnitrollerProxy 把 CTokenA, CTokenB 加到 markets map 裡
+        await unitrollerProxy._supportMarket(cTokenA.address);
+        await unitrollerProxy._supportMarket(cTokenB.address);
+
+        // 設定 TokenB 的抵押成數 (Collateral Factor，這邊為50%)  (注意第二個參數 scaled by 1e18)
+        // await unitrollerProxy._setCollateralFactor(cTokenA.address, collateralFactorOfTokenA);
+        await unitrollerProxy._setCollateralFactor(cTokenB.address, collateralFactorOfTokenB);
+
+        // 設定清償人最高可代還數量 (Close Factor，這邊為50%)
+        await unitrollerProxy._setCloseFactor(closeFactor);
+
+        // 設定清償人獎勵 (Liquidation Incentive，這邊為0.08)
+        await unitrollerProxy._setLiquidationIncentive(liquidationIncentive);
+
+        // 增加流動性
+        await unitrollerProxy.connect(userA).enterMarkets([cTokenA.address, cTokenB.address]);
+        await unitrollerProxy.connect(userB).enterMarkets([cTokenA.address, cTokenB.address]);
+
+        // UserA 使用 1 顆 tokenB 來 mint cTokenB
+        let mintAmountOfTokenB = ethers.utils.parseUnits('1', 18);
+        await tokenB.transfer(userA.address, mintAmountOfTokenB);
+        await tokenB.connect(userA).approve(cTokenB.address, mintAmountOfTokenB);
+        await cTokenB.connect(userA).mint(mintAmountOfTokenB);
+        let [errorUserA, liquidityUserA, shortfallUserA] = await unitrollerProxy.getAccountLiquidity(userA.address);
+        console.log(`UserA 使用 ${mintAmountOfTokenB} 顆 tokenB 抵押後的剩餘借款額度為: ${liquidityUserA}\n`);
+
+        // UserB 使用 50 顆 tokenA 來 mint cTokenA
+        let mintAmountOfTokenA = ethers.utils.parseUnits('50', 18);
+        await tokenA.transfer(userB.address, mintAmountOfTokenA);
+        await tokenA.connect(userB).approve(cTokenA.address, mintAmountOfTokenA);
+        await cTokenA.connect(userB).mint(mintAmountOfTokenA);
+        let [errorUserB, liquidityUserB, shortfallUserB] = await unitrollerProxy.getAccountLiquidity(userB.address);
+        // console.log(`UserB 使用 ${mintAmountOfTokenA} 顆 tokenA 抵押後的剩餘借款額度為: ${liquidityUserB}`);
+
+        // UserA 使用 tokenB (1 顆) 作為抵押品來借出 50 顆 token A
+        console.log(`----------------------------UserA 使用 tokenB (1 顆) 作為抵押品來借出 50 顆 token A----------------------------\n`);
+        let borrowAmountOfTokenA = ethers.utils.parseUnits('50', '18');
+        await cTokenA.connect(userA).borrow(borrowAmountOfTokenA);
+
+        console.log(`UserA 使用 ${mintAmountOfTokenB} 顆 tokenB 作為抵押品來借出 ${borrowAmountOfTokenA} 顆 token A 後:`);
+        console.log(`userA 擁有 ${await tokenA.balanceOf(userA.address)} 個 tokenA`);
+
+        expect(await tokenA.balanceOf(userA.address)).to.equal(borrowAmountOfTokenA);
+
+        [errorUserA, liquidityUserA, shortfallUserA] = await unitrollerProxy.getAccountLiquidity(userA.address);
+        console.log(`UserA 的剩餘借款額度為: ${liquidityUserA}`);
+        // userA 真實剩餘借款量(tokenB) = 抵押token市價 * 借出token數量 * 抵押物collateralFactor - 借出token市價 * 借出token數量 = 100 * 1 * 0.7 - 1 * 50;
+        let realLiquidityofUserA = 100 * 1 * 0.7 - 1 * 50;
+        console.log(`UserA 的真實剩餘借款額度為: ${realLiquidityofUserA} * 10^18`);
+
+        console.log(`\n真實剩餘借款額度是否小於 0 ? => ${realLiquidityofUserA < 0 ? 'Yes' : 'No'}`);
+        console.log(`是否可清算? => ${realLiquidityofUserA < 0 ? 'Yes' : 'No'}\n`);
+
+        return [collateralFactorOfTokenB, unitrollerProxy, priceOracle, userA, userB, tokenA, tokenB, cTokenA, cTokenB, PriceOfTokenB];
+    };
+
+    describe('\n⚠️  Borrow & Repay\n', () => {
         it('Should be able to borrrow\n', async () => {
             console.log(`⚠️　【測試開始: Should be able to borrrow】　⚠️`);
 
-            let [collateralFactorOfTokenB, unitrollerProxy, priceOracle, userA, userB, tokenA, tokenB, cTokenA, cTokenB, PriceOfTokenB] = await loadFixture(basicBorrow);
+            let [collateralFactorOfTokenB, unitrollerProxy, priceOracle, userA, userB, tokenA, tokenB, cTokenA, cTokenB, PriceOfTokenB] =
+                await loadFixture(basicBorrow);
 
             console.log(`⚠️　【測試結束: Should be able to borrrow】　⚠️\n\n\n`);
         });
+    });
 
+    describe(`\n⚠️  Liquidation\n`, () => {
         it(`Should be able to liquidate when tokenB's collateral factor decrease from 60% to 30%\n`, async () => {
             console.log(`⚠️　【測試開始: Should be able to liquidate when tokenB's collateral factor decrease from 60% to 30%】　⚠️`);
 
-            let [collateralFactorOfTokenB, unitrollerProxy, priceOracle, userA, userB, tokenA, tokenB, cTokenA, cTokenB, PriceOfTokenB] = await loadFixture(basicBorrow);
-            
+            let [collateralFactorOfTokenB, unitrollerProxy, priceOracle, userA, userB, tokenA, tokenB, cTokenA, cTokenB, PriceOfTokenB] =
+                await loadFixture(basicBorrow);
+
             console.log(`\n------------------------------調降 tokenB 的 collateral factor 至 30%------------------------------\n`);
             console.log(`調降 tokenB 的 collateral factor 至 30% 後:`);
             collateralFactorOfTokenB = ethers.utils.parseUnits('0.3', 18);
@@ -361,7 +365,8 @@ describe('Compound\n', () => {
         it(`Should be able to liquidate when tokenB's price decrease from $100 to $60\n`, async () => {
             console.log(`⚠️　【測試開始: Should be able to liquidate when tokenB's price decrease from $100 to $60】　⚠️`);
 
-            let [collateralFactorOfTokenB, unitrollerProxy, priceOracle, userA, userB, tokenA, tokenB, cTokenA, cTokenB, PriceOfTokenB] = await loadFixture(basicBorrow);
+            let [collateralFactorOfTokenB, unitrollerProxy, priceOracle, userA, userB, tokenA, tokenB, cTokenA, cTokenB, PriceOfTokenB] =
+                await loadFixture(basicBorrow);
 
             console.log(`\n------------------------------調降 tokenB 的 price 至 $60------------------------------\n`);
             console.log(`調降 tokenB 的 price 至 $60 後:`);
