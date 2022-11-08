@@ -401,7 +401,7 @@ const basicBorrow = async () => {
 };
 
 /**
- * 基本借貸
+ * 清算
  * -參數
  * --target: SignerWithAddress => 被清算人
  * --liquidator: SignerWithAddress => 清算人
