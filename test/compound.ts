@@ -1,12 +1,13 @@
-import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import { expect } from 'chai';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
+import { LogLevel, Logger } from '@ethersproject/logger';
+
+Logger.setLogLevel(LogLevel.ERROR);
 
 describe('Compound\n', () => {
     describe('\n⚠️  Basic deployment\n', () => {
         it('⚠️　UnitrollerProxy should have a right admin who had deployed it\n', async () => {
-
             // 部屬相關合約: PriceOracle, InterestRateModel, Comptroller, Unitroller
             const [unitrollerProxy, , , owner, , , , , ,]: any = await loadFixture(deployBasicContract);
 
@@ -21,7 +22,6 @@ describe('Compound\n', () => {
         // console.log(mintAmount);
 
         it('⚠️　Should be able to mint/redeem with token A', async () => {
-
             // 部屬相關合約: PriceOracle, InterestRateModel, Comptroller, Unitroller
             const [unitrollerProxy, , , , userA, , tokenA, , cTokenA]: any = await loadFixture(deployBasicContract);
 
@@ -78,15 +78,12 @@ describe('Compound\n', () => {
 
     describe('\n⚠️  Borrow & Repay\n', () => {
         it('⚠️　Should be able to borrrow\n', async () => {
-
             await loadFixture(basicBorrow);
-
         });
     });
 
     describe(`\n⚠️  Liquidation\n`, () => {
         it(`⚠️　Should be able to liquidate when tokenB's collateral factor decrease from 60% to 30%\n`, async () => {
-
             let [collateralFactorOfTokenB, unitrollerProxy, , userA, userB, tokenA, , cTokenA, cTokenB] = await loadFixture(basicBorrow);
 
             // ----------------------------------- 把 tokenB 的 collateral factor 從 70% 調降至 30% ----------------------------------- //
@@ -130,7 +127,6 @@ describe('Compound\n', () => {
         });
 
         it(`⚠️　Should be able to liquidate when tokenB's price decrease from $100 to $60\n`, async () => {
-
             let [, unitrollerProxy, priceOracle, userA, userB, tokenA, , cTokenA, cTokenB, PriceOfTokenB] = await loadFixture(basicBorrow);
 
             // ------------------------------------------- 調降 tokenB 的 price 至 $60 ------------------------------------------- //
@@ -237,7 +233,7 @@ const deployBasicContract = async () => {
     const tokenB = await tokenBFactory.connect(owner).deploy(ethers.utils.parseUnits('10000', 18), 'TokenB', 'TB');
     await tokenB.deployed();
     // console.log(`部屬TokenB成功，地址: ${tokenB.address}`);
-    
+
     // 部屬 CTokenA (由 owner 部屬)
     const cTokenAFactory = await ethers.getContractFactory('CErc20Immutable');
     const cTokenA = await cTokenAFactory.deploy(
@@ -330,7 +326,7 @@ const basicBorrow = async () => {
     await tokenB.transfer(userA.address, mintAmountOfTokenB);
     await tokenB.connect(userA).approve(cTokenB.address, mintAmountOfTokenB);
     await cTokenB.connect(userA).mint(mintAmountOfTokenB);
-    
+
     // UserA 使用 1 顆 tokenB 去 mint cTokenB 後，初始剩餘借款額度為 70u
     let [error, liquidity, shortfall] = await unitrollerProxy.getAccountLiquidity(userA.address);
     expect(error).to.equal(0);
