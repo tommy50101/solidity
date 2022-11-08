@@ -1,3 +1,4 @@
+import { BigNumber, Contract } from 'ethers';
 import { ethers } from 'hardhat';
 import { expect } from 'chai';
 import { loadFixture } from '@nomicfoundation/hardhat-network-helpers';
@@ -411,7 +412,7 @@ const basicBorrow = async () => {
  * -動作:
  * --liquidator 清算 target
  *  */
-async function liquidate(target: any, liquidator: any, token: any, cToken: any, amountOfLiquidateOnce: any) {
+async function liquidate(target: any, liquidator: any, token: Contract, cToken: Contract, amountOfLiquidateOnce: BigNumber) {
     // 先轉點 token 給 liquidator ，不然 liquidator 也沒 token 可還
     await token.transfer(liquidator.address, amountOfLiquidateOnce);
 
