@@ -107,19 +107,36 @@ describe('Compound\n', () => {
 
             // !!! 被清償人需要有對應的CToken，才能給清償人，require( cTokenCollateral.balanceOf(borrower) >= seizeTokens )，
             // seizeTokens = actualRepayAmount * liquidationIncentive * priceBorrowed / (priceCollateral * exchangeRate)
-            // seizeTokens = 25 * 1.08 * 1 / (100 * 1) = 27
+            // seizeTokens(被清算人會被清算幾顆) = (50 * 0.5)顆 * 1.08 * 1u / (100u * 0.01) = 27顆
+
+            // 先轉點 cTokenA 給被清算人，讓被清算人有 cToken 可以給清算人
             await tokenA.transfer(userA.address, ethers.utils.parseUnits('27', 18));
             await tokenA.connect(userA).approve(cTokenA.address, ethers.utils.parseUnits('27', 18));
             await cTokenA.connect(userA).mint(ethers.utils.parseUnits('27', 18));
 
-            // 清算
-            // 先轉點 token 給 liquidator ，不然 liquidator 也沒 token 可還
+            // 先轉點 token 給 liquidator ，讓清算人有 token 可代償
             await tokenA.transfer(userB.address, amountOfLiquidateOnce);
-            // 清算前，userB 擁有的 cToken 數量應為 50
+
+            // 清算前，userA 擁有的 cTokenA 數量應為 27，userB 擁有的 cToken 數量應為 50
+            expect(await cTokenA.balanceOf(userA.address)).to.equal(ethers.utils.parseUnits('27', 18));
             expect(await cTokenA.balanceOf(userB.address)).to.be.equal(ethers.utils.parseUnits('50', 18));
+
+            // 清算
             await tokenA.connect(userB).approve(cTokenA.address, amountOfLiquidateOnce);
             await cTokenA.connect(userB).liquidateBorrow(userA.address, amountOfLiquidateOnce, cTokenA.address);
-            // 清算後，userB 擁有的 cToken 數量應為 76.244 * 10^15
+
+            // 清算後狀態檢查
+
+            // 更新 userA 的剩餘借款額度
+            let [errorB4Liquidate, liquidityB4Liquidate, shortfallB4Liquidate] = await unitrollerProxy.getAccountLiquidity(userA.address);
+            expect(errorB4Liquidate).to.equal(0);
+            expect(liquidityB4Liquidate).to.equal(ethers.utils.parseUnits('5', 18));
+            expect(shortfallB4Liquidate).to.equal(0);
+
+            // userA 持有的 cTokenA 數量 = 27 - 27 = 0
+            expect(await cTokenA.balanceOf(userA.address)).to.equal(0);
+
+            // userB 擁有的 cToken 數量應為 76.244 * 10^15
             expect(await cTokenA.balanceOf(userB.address)).to.be.equal(ethers.utils.parseUnits('76244', 15));
 
             // ---------------------------------------------------- 清算結束 ---------------------------------------------------- //
@@ -148,19 +165,36 @@ describe('Compound\n', () => {
 
             // !!! 被清償人需要有對應的CToken，才能給清償人，require( cTokenCollateral.balanceOf(borrower) >= seizeTokens )，
             // seizeTokens = actualRepayAmount * liquidationIncentive * priceBorrowed / (priceCollateral * exchangeRate)
-            // seizeTokens = 25 * 1.08 * 1 / (100 * 1) = 27
+            // seizeTokens(被清算人會被清算幾顆) = (50 * 0.5)顆 * 1.08 * 1u / (100u * 0.01) = 27顆
+
+            // 先轉點 cTokenA 給被清算人，讓被清算人有 cToken 可以給清算人
             await tokenA.transfer(userA.address, ethers.utils.parseUnits('27', 18));
             await tokenA.connect(userA).approve(cTokenA.address, ethers.utils.parseUnits('27', 18));
             await cTokenA.connect(userA).mint(ethers.utils.parseUnits('27', 18));
 
-            // 清算
-            // 先轉點 token 給 liquidator ，不然 liquidator 也沒 token 可還
+            // 先轉點 token 給 liquidator ，讓清算人有 token 可代償
             await tokenA.transfer(userB.address, amountOfLiquidateOnce);
-            // 清算前，userB 擁有的 cToken 數量應為 50
+
+            // 清算前，userA 擁有的 cTokenA 數量應為 27，userB 擁有的 cToken 數量應為 50
+            expect(await cTokenA.balanceOf(userA.address)).to.equal(ethers.utils.parseUnits('27', 18));
             expect(await cTokenA.balanceOf(userB.address)).to.be.equal(ethers.utils.parseUnits('50', 18));
+
+            // 清算
             await tokenA.connect(userB).approve(cTokenA.address, amountOfLiquidateOnce);
             await cTokenA.connect(userB).liquidateBorrow(userA.address, amountOfLiquidateOnce, cTokenA.address);
-            // 清算後，userB 擁有的 cToken 數量應為 76.244 * 10^15
+
+            // 清算後狀態檢查
+
+            // 更新 userA 的剩餘借款額度
+            let [errorB4Liquidate, liquidityB4Liquidate, shortfallB4Liquidate] = await unitrollerProxy.getAccountLiquidity(userA.address);
+            expect(errorB4Liquidate).to.equal(0);
+            expect(liquidityB4Liquidate).to.equal(ethers.utils.parseUnits('17', 18));
+            expect(shortfallB4Liquidate).to.equal(0);
+
+            // userA 持有的 cTokenA 數量 = 27 - 27 = 0
+            expect(await cTokenA.balanceOf(userA.address)).to.equal(0);
+
+            // userB 擁有的 cToken 數量應為 76.244 * 10^15
             expect(await cTokenA.balanceOf(userB.address)).to.be.equal(ethers.utils.parseUnits('76244', 15));
 
             // ---------------------------------------------------- 清算結束 ---------------------------------------------------- //
