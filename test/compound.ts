@@ -133,10 +133,10 @@ describe('Compound\n', () => {
             expect(liquidityB4Liquidate).to.equal(ethers.utils.parseUnits('5', 18));
             expect(shortfallB4Liquidate).to.equal(0);
 
-            // userA 持有的 cTokenA 數量 = 27 - 27 = 0
+            // userA 持有的 cTokenA 數量 = 27顆 - 27顆 = 0顆
             expect(await cTokenA.balanceOf(userA.address)).to.equal(0);
 
-            // userB 擁有的 cToken 數量應為 76.244 * 10^15
+            // userB 擁有的 cTokenA 數量應為 50顆 + 26.244顆 = 76.244顆
             expect(await cTokenA.balanceOf(userB.address)).to.be.equal(ethers.utils.parseUnits('76244', 15));
 
             // ---------------------------------------------------- 清算結束 ---------------------------------------------------- //
@@ -191,10 +191,10 @@ describe('Compound\n', () => {
             expect(liquidityB4Liquidate).to.equal(ethers.utils.parseUnits('17', 18));
             expect(shortfallB4Liquidate).to.equal(0);
 
-            // userA 持有的 cTokenA 數量 = 27 - 27 = 0
+            // userA 持有的 cTokenA 數量 = 27顆 - 27顆 = 0顆
             expect(await cTokenA.balanceOf(userA.address)).to.equal(0);
 
-            // userB 擁有的 cToken 數量應為 76.244 * 10^15
+            // userB 擁有的 cTokenA 數量應為 50顆 + 26.244顆 = 76.244顆
             expect(await cTokenA.balanceOf(userB.address)).to.be.equal(ethers.utils.parseUnits('76244', 15));
 
             // ---------------------------------------------------- 清算結束 ---------------------------------------------------- //
