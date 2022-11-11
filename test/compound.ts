@@ -9,7 +9,7 @@ describe('Compound\n', () => {
     describe('\n⚠️  Basic deployment\n', () => {
         it('⚠️　UnitrollerProxy should have a right admin who had deployed it\n', async () => {
             // 部屬相關合約: PriceOracle, InterestRateModel, Comptroller, Unitroller
-            const [unitrollerProxy, , , owner, , , , , ,]: any = await loadFixture(deployBasicContract);
+            const { unitrollerProxy, owner }: any = await loadFixture(deployBasicContract);
 
             // 部屬時沒用 connect() 指定，就會預設使用第一個signer
             expect(await unitrollerProxy.admin()).to.equal(owner.address);
@@ -23,7 +23,7 @@ describe('Compound\n', () => {
 
         it('⚠️　Should be able to mint/redeem with token A', async () => {
             // 部屬相關合約: PriceOracle, InterestRateModel, Comptroller, Unitroller
-            const [unitrollerProxy, , , , userA, , tokenA, , cTokenA]: any = await loadFixture(deployBasicContract);
+            const { unitrollerProxy, userA, tokenA, cTokenA }: any = await loadFixture(deployBasicContract);
 
             //---------------------------------------------------------------------------------------------------------------------//
 
@@ -84,7 +84,7 @@ describe('Compound\n', () => {
 
     describe(`\n⚠️  Liquidation\n`, () => {
         it(`⚠️　Should be able to liquidate when tokenB's collateral factor decrease from 60% to 30%\n`, async () => {
-            let [collateralFactorOfTokenB, unitrollerProxy, , userA, userB, tokenA, , cTokenA, cTokenB] = await loadFixture(basicBorrow);
+            let { collateralFactorOfTokenB, unitrollerProxy, userA, userB, tokenA, cTokenA, cTokenB } = await loadFixture(basicBorrow);
 
             // ----------------------------------- 把 tokenB 的 collateral factor 從 70% 調降至 30% ----------------------------------- //
 
@@ -143,7 +143,7 @@ describe('Compound\n', () => {
         });
 
         it(`⚠️　Should be able to liquidate when tokenB's price decrease from $100 to $60\n`, async () => {
-            let [, unitrollerProxy, priceOracle, userA, userB, tokenA, , cTokenA, cTokenB, PriceOfTokenB] = await loadFixture(basicBorrow);
+            let { unitrollerProxy, priceOracle, userA, userB, tokenA, cTokenA, cTokenB, PriceOfTokenB } = await loadFixture(basicBorrow);
 
             // ------------------------------------------- 調降 tokenB 的 price 至 $60 ------------------------------------------- //
 
@@ -302,7 +302,7 @@ const deployBasicContract = async () => {
     expect(await cTokenA.balanceOf(owner.address)).to.be.equal(0);
     expect(await cTokenB.balanceOf(owner.address)).to.be.equal(0);
 
-    return [unitrollerProxy, interestRateModel, priceOracle, owner, userA, userB, tokenA, tokenB, cTokenA, cTokenB];
+    return { unitrollerProxy, interestRateModel, priceOracle, owner, userA, userB, tokenA, tokenB, cTokenA, cTokenB };
 };
 
 /**
@@ -325,7 +325,7 @@ const basicBorrow = async () => {
     let liquidationIncentive = ethers.utils.parseUnits('1.08', 18);
 
     // 部屬相關合約: PriceOracle, InterestRateModel, Comptroller, Unitroller
-    const [unitrollerProxy, , priceOracle, , userA, userB, tokenA, tokenB, cTokenA, cTokenB]: any = await loadFixture(deployBasicContract);
+    const { unitrollerProxy, priceOracle, userA, userB, tokenA, tokenB, cTokenA, cTokenB } = await loadFixture(deployBasicContract);
 
     // 用 Oracle 設定價格  (tokenA 價格 $1 , tokenB 價格 $100)
     await priceOracle.setUnderlyingPrice(cTokenA.address, PriceOfTokenA);
@@ -386,5 +386,5 @@ const basicBorrow = async () => {
     expect(liquidity).to.equal(ethers.utils.parseUnits('20', 18));
     expect(shortfall).to.equal(0);
 
-    return [collateralFactorOfTokenB, unitrollerProxy, priceOracle, userA, userB, tokenA, tokenB, cTokenA, cTokenB, PriceOfTokenB];
+    return { collateralFactorOfTokenB, unitrollerProxy, priceOracle, userA, userB, tokenA, tokenB, cTokenA, cTokenB, PriceOfTokenB };
 };
