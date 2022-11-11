@@ -104,7 +104,6 @@ describe('Compound\n', () => {
 
             // 計算 單次可清算數量 = 借款人已借得該token數量 * closeFactor
             let amountOfLiquidateOnce = ethers.utils.parseUnits((50 * 0.5).toString(), 18);
-            expect(amountOfLiquidateOnce).to.equal(ethers.utils.parseUnits('25', 18));
 
             // !!! 被清償人需要有對應的CToken，才能給清償人，require( cTokenCollateral.balanceOf(borrower) >= seizeTokens )，
             // seizeTokens = actualRepayAmount * liquidationIncentive * priceBorrowed / (priceCollateral * exchangeRate)
@@ -146,7 +145,6 @@ describe('Compound\n', () => {
 
             // 計算 單次可清算數量 = 借款人已借得該token數量 * closeFactor
             let amountOfLiquidateOnce = ethers.utils.parseUnits((50 * 0.5).toString(), 18);
-            expect(amountOfLiquidateOnce).to.equal(ethers.utils.parseUnits('25', 18));
 
             // !!! 被清償人需要有對應的CToken，才能給清償人，require( cTokenCollateral.balanceOf(borrower) >= seizeTokens )，
             // seizeTokens = actualRepayAmount * liquidationIncentive * priceBorrowed / (priceCollateral * exchangeRate)
