@@ -103,7 +103,38 @@ describe('Compound\n', () => {
             expect(shortfall).to.equal(ethers.utils.parseUnits('20', 18));
         });
 
-        it(`⚠️　Should be able to liquidate when tokenB's collateral factor decrease from 70% to 30%`, async () => {
+        it(`⚠️　Should revert when liquidator liquidate with CTokenA which borrower doesn't have enough`, async () => {
+            // --------------------------------------------------- 基本借貸場景 --------------------------------------------------- //
+
+            let { collateralFactorOfTokenB, unitrollerProxy, userA, userB, tokenA, cTokenA, cTokenB } = await loadFixture(basicBorrow);
+
+            // ----------------------------------- 把 tokenB 的 collateral factor 從 70% 調降至 30% ----------------------------------- //
+
+            collateralFactorOfTokenB = ethers.utils.parseUnits('0.3', 18);
+            await unitrollerProxy._setCollateralFactor(cTokenB.address, collateralFactorOfTokenB);
+
+            // ---------------------------------------------------- 清算開始 ---------------------------------------------------- //
+
+            // 計算 單次可清算數量 = 借款人已借得該token數量 * closeFactor
+            let amountOfLiquidateOnce = ethers.utils.parseUnits((50 * 0.5).toString(), 18);
+
+            // 先轉點 token 給 liquidator ，讓清算人有 token 可代償
+            await tokenA.transfer(userB.address, amountOfLiquidateOnce);
+
+            // 清算前，userA 擁有的 cTokenA 數量應為 0，userB 擁有的 cToken 數量應為 50
+            expect(await cTokenA.balanceOf(userA.address)).to.equal(0);
+            expect(await cTokenA.balanceOf(userB.address)).to.be.equal(ethers.utils.parseUnits('50', 18));
+
+            // 清算 ( userB 指定使用 CTokenA 當作獎勵，但 userA 身上沒 CTokenA，應報錯 )
+            await tokenA.connect(userB).approve(cTokenA.address, amountOfLiquidateOnce);
+            await expect(cTokenA.connect(userB).liquidateBorrow(userA.address, amountOfLiquidateOnce, cTokenA.address)).to.revertedWith(
+                'LIQUIDATE_SEIZE_TOO_MUCH'
+            );
+
+            // ---------------------------------------------------- 清算結束 ---------------------------------------------------- //
+        });
+
+        it(`⚠️　Should be able to liquidate with tokenA if borrower has enough CTokenA`, async () => {
             // --------------------------------------------------- 基本借貸場景 --------------------------------------------------- //
 
             let { collateralFactorOfTokenB, unitrollerProxy, userA, userB, tokenA, cTokenA, cTokenB } = await loadFixture(basicBorrow);
@@ -130,7 +161,8 @@ describe('Compound\n', () => {
             // 先轉點 token 給 liquidator ，讓清算人有 token 可代償
             await tokenA.transfer(userB.address, amountOfLiquidateOnce);
 
-            // 清算前，userA 擁有的 cTokenA 數量應為 27，userB 擁有的 cToken 數量應為 50
+            // 清算前，userA 擁有的 cTokenA 數量 = 27顆
+            // 清算前，userB 擁有的 cTokenA 數量 = 50顆
             expect(await cTokenA.balanceOf(userA.address)).to.equal(ethers.utils.parseUnits('27', 18));
             expect(await cTokenA.balanceOf(userB.address)).to.be.equal(ethers.utils.parseUnits('50', 18));
 
@@ -147,10 +179,52 @@ describe('Compound\n', () => {
             expect(shortfallB4Liquidate).to.equal(0);
 
             // userA 持有的 cTokenA 數量 = 27顆 - 27顆 = 0顆
+            // userB 擁有的 cTokenA 數量 = 50顆 + 26.244顆 = 76.244顆
             expect(await cTokenA.balanceOf(userA.address)).to.equal(0);
-
-            // userB 擁有的 cTokenA 數量應為 50顆 + 26.244顆 = 76.244顆
             expect(await cTokenA.balanceOf(userB.address)).to.be.equal(ethers.utils.parseUnits('76244', 15));
+
+            // ---------------------------------------------------- 清算結束 ---------------------------------------------------- //
+        });
+
+        it(`⚠️　Should be able to liquidate with CTokenB`, async () => {
+            // --------------------------------------------------- 基本借貸場景 --------------------------------------------------- //
+
+            let { collateralFactorOfTokenB, unitrollerProxy, userA, userB, tokenA, cTokenA, cTokenB } = await loadFixture(basicBorrow);
+
+            // ----------------------------------- 把 tokenB 的 collateral factor 從 70% 調降至 30% ----------------------------------- //
+
+            collateralFactorOfTokenB = ethers.utils.parseUnits('0.3', 18);
+            await unitrollerProxy._setCollateralFactor(cTokenB.address, collateralFactorOfTokenB);
+
+            // ---------------------------------------------------- 清算開始 ---------------------------------------------------- //
+
+            // 計算 單次可清算數量 = 借款人已借得該token數量 * closeFactor
+            let amountOfLiquidateOnce = ethers.utils.parseUnits((50 * 0.5).toString(), 18);
+
+            // 先轉點 token 給 liquidator ，讓清算人有 token 可代償
+            await tokenA.transfer(userB.address, amountOfLiquidateOnce);
+
+            // 清算前，userA 擁有的 cTokenB 數量 = 1顆
+            // 清算前，userB 擁有的 cTokenB 數量 = 0顆
+            expect(await cTokenB.balanceOf(userA.address)).to.equal(ethers.utils.parseUnits('1', 18));
+            expect(await cTokenB.balanceOf(userB.address)).to.be.equal(0);
+
+            // 清算 ( userB 指定使用 CTokenB 當作獎勵 )
+            await tokenA.connect(userB).approve(cTokenA.address, amountOfLiquidateOnce);
+            await cTokenA.connect(userB).liquidateBorrow(userA.address, amountOfLiquidateOnce, cTokenB.address);
+
+            // 清算後狀態檢查
+
+            // 更新 userA 的剩餘借款額度
+            let [errorB4Liquidate, liquidityB4Liquidate, shortfallB4Liquidate] = await unitrollerProxy.getAccountLiquidity(userA.address);
+            expect(errorB4Liquidate).to.equal(0);
+            expect(liquidityB4Liquidate).to.equal(0);
+            expect(shortfallB4Liquidate).to.equal(ethers.utils.parseUnits('31', 17));
+
+            // 清算後，userA 持有的 cTokenB 數量 = 1顆 - 0.28顆 = 0.73顆
+            // 清算後，userB 擁有的 cTokenB 數量 = 0顆 + 0.26244顆 = 0.26244顆
+            expect(await cTokenB.balanceOf(userA.address)).to.equal(ethers.utils.parseUnits('73', 16));
+            expect(await cTokenB.balanceOf(userB.address)).to.be.equal(ethers.utils.parseUnits('26244', 13));
 
             // ---------------------------------------------------- 清算結束 ---------------------------------------------------- //
         });
@@ -174,7 +248,7 @@ describe('Compound\n', () => {
             expect(shortfall).to.equal(ethers.utils.parseUnits('8', 18));
         });
 
-        it(`⚠️　Should be able to liquidate when tokenB's price decrease from $100 to $60`, async () => {
+        it(`⚠️　Should be able to liquidate when borrower has enough tokenA`, async () => {
             // --------------------------------------------------- 基本借貸場景 --------------------------------------------------- //
 
             let { unitrollerProxy, priceOracle, userA, userB, tokenA, cTokenA, cTokenB, PriceOfTokenB } = await loadFixture(basicBorrow);
@@ -201,7 +275,8 @@ describe('Compound\n', () => {
             // 先轉點 token 給 liquidator ，讓清算人有 token 可代償
             await tokenA.transfer(userB.address, amountOfLiquidateOnce);
 
-            // 清算前，userA 擁有的 cTokenA 數量應為 27，userB 擁有的 cToken 數量應為 50
+            // 清算前，userA 擁有的 cTokenA 數量應為 27顆
+            // 清算前，userB 擁有的 cTokenA 數量應為 50顆
             expect(await cTokenA.balanceOf(userA.address)).to.equal(ethers.utils.parseUnits('27', 18));
             expect(await cTokenA.balanceOf(userB.address)).to.be.equal(ethers.utils.parseUnits('50', 18));
 
@@ -218,9 +293,8 @@ describe('Compound\n', () => {
             expect(shortfallB4Liquidate).to.equal(0);
 
             // userA 持有的 cTokenA 數量 = 27顆 - 27顆 = 0顆
+            // userB 擁有的 cTokenA 數量 = 50顆 + 26.244顆 = 76.244顆
             expect(await cTokenA.balanceOf(userA.address)).to.equal(0);
-
-            // userB 擁有的 cTokenA 數量應為 50顆 + 26.244顆 = 76.244顆
             expect(await cTokenA.balanceOf(userB.address)).to.be.equal(ethers.utils.parseUnits('76244', 15));
 
             // ---------------------------------------------------- 清算結束 ---------------------------------------------------- //
