@@ -7,7 +7,7 @@ Logger.setLogLevel(LogLevel.ERROR);
 
 describe('Compound\n', () => {
     describe('\n⚠️  Basic deployment\n', () => {
-        it('⚠️　UnitrollerProxy should have a right admin who had deployed it\n', async () => {
+        it('⚠️　UnitrollerProxy should have a right admin who had deployed it', async () => {
             // 部屬相關合約: PriceOracle, InterestRateModel, Comptroller, Unitroller
             const { unitrollerProxy, owner }: any = await loadFixture(deployBasicContract);
 
@@ -77,13 +77,15 @@ describe('Compound\n', () => {
     });
 
     describe('\n⚠️  Borrow & Repay\n', () => {
-        it('⚠️　Should be able to borrrow\n', async () => {
+        it('⚠️　Should be able to borrrow', async () => {
             await loadFixture(basicBorrow);
         });
     });
 
     describe(`\n⚠️  Liquidation\n`, () => {
-        it(`⚠️　Should be able to liquidate when tokenB's collateral factor decrease from 60% to 30%\n`, async () => {
+        it(`⚠️　Should have shortfall once tokenB's collateral factor decrease from 70% to 30%`, async () => {
+            // --------------------------------------------------- 基本借貸場景 --------------------------------------------------- //
+
             let { collateralFactorOfTokenB, unitrollerProxy, userA, userB, tokenA, cTokenA, cTokenB } = await loadFixture(basicBorrow);
 
             // ----------------------------------- 把 tokenB 的 collateral factor 從 70% 調降至 30% ----------------------------------- //
@@ -99,6 +101,17 @@ describe('Compound\n', () => {
             expect(error).to.equal(0);
             expect(liquidity).to.equal(0);
             expect(shortfall).to.equal(ethers.utils.parseUnits('20', 18));
+        });
+
+        it(`⚠️　Should be able to liquidate when tokenB's collateral factor decrease from 70% to 30%`, async () => {
+            // --------------------------------------------------- 基本借貸場景 --------------------------------------------------- //
+
+            let { collateralFactorOfTokenB, unitrollerProxy, userA, userB, tokenA, cTokenA, cTokenB } = await loadFixture(basicBorrow);
+
+            // ----------------------------------- 把 tokenB 的 collateral factor 從 70% 調降至 30% ----------------------------------- //
+
+            collateralFactorOfTokenB = ethers.utils.parseUnits('0.3', 18);
+            await unitrollerProxy._setCollateralFactor(cTokenB.address, collateralFactorOfTokenB);
 
             // ---------------------------------------------------- 清算開始 ---------------------------------------------------- //
 
@@ -142,10 +155,12 @@ describe('Compound\n', () => {
             // ---------------------------------------------------- 清算結束 ---------------------------------------------------- //
         });
 
-        it(`⚠️　Should be able to liquidate when tokenB's price decrease from $100 to $60\n`, async () => {
+        it(`⚠️　Should have shortfall once tokenB's price decrease from $100 to $60`, async () => {
+            // --------------------------------------------------- 基本借貸場景 --------------------------------------------------- //
+
             let { unitrollerProxy, priceOracle, userA, userB, tokenA, cTokenA, cTokenB, PriceOfTokenB } = await loadFixture(basicBorrow);
 
-            // ------------------------------------------- 調降 tokenB 的 price 至 $60 ------------------------------------------- //
+            // ------------------------------------------- 調降 tokenB 的 price 從 $100 至 $60 ------------------------------------------- //
 
             PriceOfTokenB = ethers.utils.parseUnits('60', 18);
             await priceOracle.setUnderlyingPrice(cTokenB.address, PriceOfTokenB);
@@ -157,6 +172,17 @@ describe('Compound\n', () => {
             expect(error).to.equal(0);
             expect(liquidity).to.equal(0);
             expect(shortfall).to.equal(ethers.utils.parseUnits('8', 18));
+        });
+
+        it(`⚠️　Should be able to liquidate when tokenB's price decrease from $100 to $60`, async () => {
+            // --------------------------------------------------- 基本借貸場景 --------------------------------------------------- //
+
+            let { unitrollerProxy, priceOracle, userA, userB, tokenA, cTokenA, cTokenB, PriceOfTokenB } = await loadFixture(basicBorrow);
+
+            // ------------------------------------------- 調降 tokenB 的 price 從 $100 至 $60 ------------------------------------------- //
+
+            PriceOfTokenB = ethers.utils.parseUnits('60', 18);
+            await priceOracle.setUnderlyingPrice(cTokenB.address, PriceOfTokenB);
 
             // ---------------------------------------------------- 清算開始 ---------------------------------------------------- //
 
