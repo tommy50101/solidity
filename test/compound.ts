@@ -223,7 +223,7 @@ describe('Compound\n', () => {
         // 設定清償人獎勵 (Liquidation Incentive，這邊為0.08)
         await unitrollerProxy._setLiquidationIncentive(liquidationIncentive);
 
-        // 增加流動性
+        // 選擇將存入的某資產開啟，做為抵押品 (有開啟的資產，才能額外增加可借額度)
         await unitrollerProxy.connect(userA).enterMarkets([cTokenA.address, cTokenB.address]);
         await unitrollerProxy.connect(userB).enterMarkets([cTokenA.address, cTokenB.address]);
 
