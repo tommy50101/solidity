@@ -8,6 +8,9 @@
         "@openzeppelin/contracts": "^4.7.3",
         "@openzeppelin/contracts-upgradeable": "^4.8.0-rc.1",
         "@openzeppelin/hardhat-upgrades": "^1.21.0",
+        "@uniswap/lib": "^4.0.1-alpha",
+        "@uniswap/v3-core": "^1.0.1",
+        "@uniswap/v3-periphery": "^1.4.1",
         "dotenv": "^16.0.3"
     }
 }
