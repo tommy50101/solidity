@@ -32,8 +32,10 @@ let flashloan: any;
 
 const liquidationIncentive = parseUnits('1.1', 18);
 const closeFactor = parseUnits('0.5', 18);
-const priceOfTokenA = parseUnits('1', 18 + (18 - 6)); // USDC
-const priceOfTokenB = parseUnits('10', 18); // UNI
+// USDC 
+const priceOfTokenA = parseUnits('1', 36 - 6); // 10 ^ (36 - underlying asses)
+// UNI
+const priceOfTokenB = parseUnits('10', 18);
 
 const USDCAmount = parseUnits('5000', 6);
 const UNIAmount = parseUnits('1000', 18);
@@ -107,7 +109,7 @@ describe('Flash Loan', async () => {
             `${USDC_ADDRESS}`,
             unitrollerProxy.address,
             interestRateModel.address,
-            parseUnits('1', 6),
+            parseUnits('1', 6), // 鏈上USDC的Decimal只有6
             'USDC',
             'USDC',
             DECIMALS,
