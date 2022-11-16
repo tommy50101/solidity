@@ -30,7 +30,7 @@ let unitroller;
 let repayAmount: any;
 let flashloan: any;
 
-const liquidationIncentive = parseUnits('1.1', 18);
+const liquidationIncentive = parseUnits('1.08', 18);
 const closeFactor = parseUnits('0.5', 18);
 // USDC 
 const priceOfTokenA = parseUnits('1', 36 - 6); // 10 ^ (36 - underlying asses)
@@ -41,7 +41,7 @@ const USDCAmount = parseUnits('5000', 6);
 const UNIAmount = parseUnits('1000', 18);
 
 const setComptroller = async () => {
-    // Set Liquidation incentive (設為 10%（1.1 * 1e18))
+    // Set Liquidation incentive (設為 8%（1.08 * 1e18))
     await unitrollerProxy._setLiquidationIncentive(liquidationIncentive);
 
     // Set Close factor (設定為 50%)
@@ -50,9 +50,9 @@ const setComptroller = async () => {
     // Set Price oracle
     await unitrollerProxy._setPriceOracle(priceOracle.address);
 
-    // Set Underlying price (USDC 的價格為 $1，UNI 的價格為 $10)
-    await priceOracle.setUnderlyingPrice(cTokenA.address, priceOfTokenA);
-    await priceOracle.setUnderlyingPrice(cTokenB.address, priceOfTokenB);
+    // Set Underlying price
+    await priceOracle.setUnderlyingPrice(cTokenA.address, priceOfTokenA); // USDC 的價格為 $1
+    await priceOracle.setUnderlyingPrice(cTokenB.address, priceOfTokenB); // UNI 的價格為 $10
 
     // Set Support market
     await unitrollerProxy._supportMarket(cTokenA.address);
@@ -224,17 +224,38 @@ describe('Flash Loan', async () => {
 
         it('Execute ...', async () => {
             // seizeTokens = actualRepayAmount * liquidationIncentive * priceBorrowed / (priceCollateral * exchangeRate)
-            // seizeTokens = (5000顆 * 0.5) * 1.1 * 1u / (6.2u * 1) = 443.648
+            // seizeTokens = (5000顆 * 0.5) * 1.08 * 1u / (6.2u * 1) = 435.4838709677419顆 (被清算人要被轉出的 CTokenB 數量)
 
-            await flashloan.connect(user2).flashLoan(USDC_ADDRESS, repayAmount);
+            // console.log(`-Before`);
+            // console.log(`--CUNI`);
+            // console.log(`  USER1: ${await cTokenB.balanceOf(user1.address)}`); // 1000000000000000000000
+            // console.log(`  USER2: ${await cTokenB.balanceOf(user2.address)}`); // 0
+            // console.log(`--USDC`);
+            // console.log(`  USER1: ${await usdc.balanceOf(user1.address)}`); // 5000000000
+            // console.log(`  USER2: ${await usdc.balanceOf(user2.address)}\n`); //0
+            expect(await cTokenB.balanceOf(user1.address)).to.eq(parseUnits('1000', 18));
+            expect(await cTokenB.balanceOf(user2.address)).to.eq(0);
+            expect(await usdc.balanceOf(user1.address)).to.eq(parseUnits('5000', 6));
+            expect(await usdc.balanceOf(user2.address)).to.eq(0);
+
             /**
              * 透過 AAVE 的 Flash loan 來清算
              * 可以自行檢查清算 50% 後是不是大約可以賺 121 USD
              * result: $121.739940
              */
-            expect(await usdc.balanceOf(user2.address)).to.gt(0);
-
-            console.log(await usdc.balanceOf(user2.address));
+            await flashloan.connect(user2).flashLoan(USDC_ADDRESS, repayAmount);
+            
+            // console.log(`-Aefore:`);
+            // console.log(`--CUNI`);
+            // console.log(`  USER1: ${await cTokenB.balanceOf(user1.address)}`); // 564516129032258064517
+            // console.log(`  USER2: ${await cTokenB.balanceOf(user2.address)}`); // 0
+            // console.log(`--USDC`);
+            // console.log(`  USER1: ${await usdc.balanceOf(user1.address)}`); // 5000000000
+            // console.log(`  USER2: ${await usdc.balanceOf(user2.address)}`); // 121739940
+            expect(await cTokenB.balanceOf(user1.address)).to.eq(parseUnits('564.516129032258064517', 18));
+            expect(await cTokenB.balanceOf(user2.address)).to.eq(0);
+            expect(await usdc.balanceOf(user1.address)).to.eq(parseUnits('5000', 6));
+            expect(await usdc.balanceOf(user2.address)).to.eq(parseUnits('121.739940', 6));
         });
     });
 });

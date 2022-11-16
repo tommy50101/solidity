@@ -56,7 +56,7 @@ contract AaveFlashLoan is FlashLoanReceiverBase {
     }
 
     /**
-        This function is called after your contract has received the flash loaned amount
+        This function is called after your contract has received the flash loaned amount  (閃電貸所借代幣轉至此合約"後"，所要進行的操作)
      */
     function executeOperation(
         address[] calldata assets,
@@ -69,19 +69,24 @@ contract AaveFlashLoan is FlashLoanReceiverBase {
         require(initiator == address(this), 'Initiator Invalid');
 
         UintVars memory uintVars;
-        
-        // 清算人授權 CUSDC 轉移 USDC
+
+        // -------------------------------------------------------- 清算 -------------------------------------------------------- //
+
+        // 授權 CUSDC合約 可以從 此合約 轉 USDC 至 CUSDC合約 (代替被清償人Repay)
         IERC20(USDC).approve(address(cUSDC), repayAmount);
 
-        // 清算人以 USDC 作清算，歸還 USDC 以取得 CUSDC
+        // 此合約 調用 CUSDC合約的清算函數，repay CUI 後取得 UNI
         cUSDC.liquidateBorrow(borrower, repayAmount, cUNI);
 
-        // Redeem CUNI 並拿回 UNI
+        // ---------------------------------------------- Redeem 清算後拿到的抵押代幣 --------------------------------------------- //
+
+        // 此合約 redeem CUNI 回 CUNI合約，拿回 UNI
         cUNI.redeem(cUNI.balanceOf(address(this)));
 
-        uintVars.uniBalance = IERC20(UNI).balanceOf(address(this));
+        // -------------------------------------------------------- 換錢 -------------------------------------------------------- //
 
-        // 授權 uniswap 可以把 UNI 轉成 USDC 
+        // 授權 uniswap 可以把 UNI 轉成 USDC
+        uintVars.uniBalance = IERC20(UNI).balanceOf(address(this));
         IERC20(UNI).approve(address(swapRouter), uintVars.uniBalance);
 
         // Exchange from UNI to USDC
@@ -97,28 +102,28 @@ contract AaveFlashLoan is FlashLoanReceiverBase {
         });
         uintVars.amountOut_USDC = swapRouter.exactInputSingle(uniswapParams);
 
-        {
-            // Approve the LendingPool contract allowance to *pull* the owed amount
-            // address[] memory tempAssets = assets;
-            for (uint256 i = 0; i < assets.length; i++) {
-                
-                // 加上手續費歸還至 AAVE LENDING_POOL
-                uintVars.amountOwing = amounts[i].add(premiums[i]);
-                IERC20(assets[i]).approve(address(LENDING_POOL), uintVars.amountOwing);
+        // -------------------------------------------------------- 還錢 -------------------------------------------------------- //
 
-                // 剩餘 token 轉回給閃電貸借款人
-                uintVars.leftBalance = uintVars.amountOut_USDC - uintVars.amountOwing;
-                bytes memory callData = abi.encodeWithSelector(bytes4(params), admin, uintVars.leftBalance);
-                (bool success, ) = assets[i].call(callData);
-                require(success, "Transfer rejected");
-            }
+        // Approve the LendingPool contract allowance to *pull* the owed amount
+        // address[] memory tempAssets = assets;
+        for (uint256 i = 0; i < assets.length; i++) {
+            // 加上手續費，將 USDC 歸還至 AAVE LENDING_POOL
+            uintVars.amountOwing = amounts[i].add(premiums[i]);
+            IERC20(assets[i]).approve(address(LENDING_POOL), uintVars.amountOwing);
+
+            // 剩餘 USDC 轉回給 閃電貸借款人
+            uintVars.leftBalance = uintVars.amountOut_USDC - uintVars.amountOwing;
+            bytes memory callData = abi.encodeWithSelector(bytes4(params), admin, uintVars.leftBalance);
+            (bool success, ) = assets[i].call(callData);
+            require(success, 'Transfer rejected');
         }
 
         return true;
     }
 
     /**
-        Liquidator call this function
+        Liquidator call this function ( 借款人呼叫此函數，從閃電貸的 LENDING_POOL 裡借款 )
+        ( P.S. 注意!! 借來的代幣不會轉到閃電貸借款人手中，而是轉到這個合約裡!! )
      */
     function flashLoan(address asset, uint256 amount) external onlyAdmin {
         address receiver = address(this);
