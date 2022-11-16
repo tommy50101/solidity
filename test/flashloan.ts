@@ -1,9 +1,22 @@
+/**
+ * 使用 Hardhat 的 fork 模式撰寫測試，並使用 AAVE 的 Flash loan 來清算 user1，請遵循以下細節：
+ * Fork Ethereum mainnet at block 15815693 (Reference)
+ * cToken 的 decimals 皆為 18，初始 exchangeRate 為 1:1
+ * Close factor 設定為 50%
+ * Liquidation incentive 設為 8% (1.08 * 1e18) 或 10%
+ * 使用 USDC 以及 UNI 代幣來作為 token A 以及 Token B
+ * 在 Oracle 中設定 USDC 的價格為 $1，UNI 的價格為 $10
+ * 設定 UNI 的 collateral factor 為 50%
+ * User1 使用 1000 顆 UNI 作為抵押品借出 5000 顆 USDC
+ * 將 UNI 價格改為 $6.2 使 User1 產生 Shortfall，並讓 User2 透過 AAVE 的 Flash loan 來清算 User1
+ * 可以自行檢查清算 50% 後是不是大約可以賺 121 USD（Liquidation incentive = 8%）
+ */
+
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const { impersonateAccount } = require('@nomicfoundation/hardhat-network-helpers');
 const { formatUnits, parseUnits, parseEther } = require('ethers/lib/utils');
 import { LogLevel, Logger } from '@ethersproject/logger';
-import Bignumber from 'bignumber.js';
 Logger.setLogLevel(LogLevel.ERROR);
 
 const BINANCE_ADDRESS = `0xF977814e90dA44bFA03b6295A0616a897441aceC`;
@@ -32,13 +45,14 @@ let flashloan: any;
 
 const liquidationIncentive = parseUnits('1.08', 18);
 const closeFactor = parseUnits('0.5', 18);
-// USDC 
-const priceOfTokenA = parseUnits('1', 36 - 6); // 10 ^ (36 - underlying asses)
-// UNI
-const priceOfTokenB = parseUnits('10', 18);
-
 const USDCAmount = parseUnits('5000', 6);
 const UNIAmount = parseUnits('1000', 18);
+
+// DECIMAL of Compound's serUnderlyingPrice is 10^(36 - decimal of underlying asses)
+// USDC
+const priceOfTokenA = parseUnits('1', 36 - 6);
+// UNI
+const priceOfTokenB = parseUnits('10', 36 - 18);
 
 const setComptroller = async () => {
     // Set Liquidation incentive (設為 8%（1.08 * 1e18))
@@ -244,7 +258,7 @@ describe('Flash Loan', async () => {
              * result: $121.739940
              */
             await flashloan.connect(user2).flashLoan(USDC_ADDRESS, repayAmount);
-            
+
             // console.log(`-Aefore:`);
             // console.log(`--CUNI`);
             // console.log(`  USER1: ${await cTokenB.balanceOf(user1.address)}`); // 564516129032258064517

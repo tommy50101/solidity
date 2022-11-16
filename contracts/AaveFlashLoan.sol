@@ -1,3 +1,7 @@
+/**
+ * 利用閃電貸進行清算的合約
+ */
+
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.10;
 
