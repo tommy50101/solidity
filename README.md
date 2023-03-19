@@ -1,3 +1,7 @@
+## 簡介
+
+模擬一個簡易的Compound服務，透過測試(./test/compound.ts, ./test/compound.ts)，模擬整個借貸場景 (包括 質押、借貸、清算、閃電貸)
+
 ## 建置
 
 安裝 dependency
