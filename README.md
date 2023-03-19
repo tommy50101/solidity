@@ -33,7 +33,10 @@ npx hardhat compile
 npx hardhat test
 ```
 
+測試文件路徑：
+
 ./test/compound.ts
+
 ./test/flashloan.ts
 
 # Sample Hardhat Project
