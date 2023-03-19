@@ -1,6 +1,6 @@
 ## 簡介
 
-模擬一個簡易的Compound服務，透過測試(./test/compound.ts, ./test/compound.ts)，模擬整個借貸場景 (包括 質押、借貸、清算、閃電貸)
+模擬一個簡易的Compound服務，透過執行測試，模擬多種不同的借貸場景 (包括 質押、借貸、清算、閃電貸)
 
 ## 建置
 
@@ -33,7 +33,8 @@ npx hardhat compile
 npx hardhat test
 ```
 
-
+./test/compound.ts
+./test/flashloan.ts
 
 # Sample Hardhat Project
 
